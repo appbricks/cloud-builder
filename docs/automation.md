@@ -2,17 +2,25 @@
 
 ## Overview
 
-The automation service can be implemented either as a collection of AWS lambda functions behind an AWS API gateway invoked via a thin client application or executed locally via a thick client application such as a CLI. The underlying automation framework is based on the [Terraform](https://terraform.io) automation engine.
+The automation service can be implemented either as a collection of AWS lambda functions behind an AWS API gateway invoked via a thin client application or executed locally via a thick client application such as a CLI. The underlying framework is based on the [Terraform](https://terraform.io) automation engine.
+
+## Architecture
+
+### Automation Services
 
 The high-level architecture for a thin client that uses the automation services in the cloud is given in the diagram below.
 
 ![alt text](images/automation-services.png "Cloud Builder Automation Service")
 
-For example the Cloud Builder mobile client invoke these cloud functions as it cannot execute Terraform locally. These functions and associated recipes can be used to build a secured network mesh across multiple clouds. This sandboxed cloud network can then be used to host personal resources as well encrypted data, as shown below. Additional functions will provide the ability to migrate resources and encrypted data across clouds and optimize costs based on recommendations delivered via the client.
+The Cloud Builder mobile client invokes these cloud functions via a REST API Gateway as they cannot be run natively on mobile devices. Alternatively, the Cloud Builder desktop client and CLI will encapsulate these services and run them locally.
+
+## Sandbox Network Architecture
+
+These functions run Terraform recipes to build encrypted network meshes across multiple clouds. These sandboxed cloud virtual networks can then be used to host software and services at the same time ensuring encryption of data in motion and rest. Additional functions will provide the ability to migrate resources and encrypted data across clouds and optimize costs based on recommendations delivered via the client.
 
 ![alt text](images/network-mesh.png "Cloud Builder Network Mesh")
 
-This mesh will also provide egress to the internet via a VPN tunnel, and access to all personal resources will traverse the VPN nodes and then the IPSec network mesh providing a secure dark net for hosting personal services.
+This mesh will also provide egress to the internet via a VPN tunnel. Access to all personal resources will also traverse the VPN nodes and then the IPSec/Wireguard network mesh providing a secure dark net for hosting personal services.
 
 ![alt text](images/client-access.png "Cloud Builder Client")
 
