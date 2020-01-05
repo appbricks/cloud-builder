@@ -2,6 +2,4 @@
 
 ***Be Safe, Be Secure, Stay Connected***
 
-## Overview
-
-This project implements the framework for launching [Cloud Builder](https://github.com/appbricks/cloud-builder) automation recipes.
+This project implements a framework for launching cloud automation recipes that can be used to build private and secure sandbox environments with selected software and services using your public cloud account.
