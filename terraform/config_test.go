@@ -54,7 +54,6 @@ var _ = Describe("Runner", func() {
 			for i, f := range form.InputFields() {
 				Expect(f.Name()).To(Equal(expectedVariablesInOrder[i]))
 			}
-
 		})
 	})
 })

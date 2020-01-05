@@ -10,10 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/terraform/configs"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
+
+	hcl "github.com/hashicorp/hcl/v2"
 
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/provider"
@@ -152,13 +153,19 @@ func (r *configReader) ReadMetadata(
 	if hdiag != nil {
 
 		for _, d := range hdiag {
-			errMessage.WriteString(d.Summary)
+			if d.Severity == hcl.DiagWarning {
+				logger.DebugMessage("WARNING! %s (%s)", d.Summary, d.Detail)
+			} else {
+				errMessage.WriteString(fmt.Sprintf("%s (%s); ", d.Summary, d.Detail))
+			}
 		}
-		return fmt.Errorf(
-			"error parsing terraform tamplates at '%s': %s",
-			configPath,
-			errMessage.String(),
-		)
+		if errMessage.Len() > 0 {
+			return fmt.Errorf(
+				"error parsing terraform tamplates at '%s': %s",
+				configPath,
+				errMessage.String(),
+			)
+		}
 	}
 
 	// check if recipe backend type is supported
