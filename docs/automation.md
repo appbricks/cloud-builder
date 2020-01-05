@@ -14,7 +14,7 @@ The high-level architecture for a thin client that uses the automation services 
 
 The Cloud Builder mobile client invokes these cloud functions via a REST API Gateway as they cannot be run natively on mobile devices. Alternatively, the Cloud Builder desktop client and CLI will encapsulate these services and run them locally.
 
-## Sandbox Network Architecture
+### Sandbox Network Architecture
 
 These functions run Terraform recipes to build encrypted network meshes across multiple clouds. These sandboxed cloud virtual networks can then be used to host software and services at the same time ensuring encryption of data in motion and rest. Additional functions will provide the ability to migrate resources and encrypted data across clouds and optimize costs based on recommendations delivered via the client.
 
