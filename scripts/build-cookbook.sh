@@ -100,8 +100,8 @@ recipe_repo_dir=${build_dir}/repos
 bin_dir=${build_dir}/bin
 dist_dir=${build_dir}/dist/${target_os}_${target_arch}
 dest_dist_dir=${HOME_DIR:-$home_dir}/dist
-cookbook_bin_dir=${dist_dir}/cookbook/bin
-cookbook_plugins_dir=${dist_dir}/cookbook/bin/plugins/${target_os}_${target_arch}
+cookbook_bin_dir=${dist_dir}/bin
+cookbook_plugins_dir=${dist_dir}/bin/plugins/${target_os}_${target_arch}
 
 [[ -z $clean ]] || (rm -fr $dist_dir && rm -fr $dest_dist_dir)
 
@@ -137,7 +137,7 @@ if [[ ! -e $cookbook_terraform_binary ]]; then
   popd
 fi
 
-cookbook_recipes_dir=${dist_dir}/cookbook/recipes
+cookbook_recipes_dir=${dist_dir}/recipes
 [[ -z $single ]] || rm -fr $cookbook_recipes_dir
 
 if [[ -n $recipe_git_project_url ]]; then
@@ -243,8 +243,9 @@ fi
 
 mkdir -p ${dest_dist_dir}
 rm -fr ${dest_dist_dir}/cookbook.zip
-pushd ${dist_dir}/cookbook
+pushd ${dist_dir}
 zip -ur ${dest_dist_dir}/cookbook.zip .
+popd
 
 if [[ $current_os == linux ]]; then
   stat -t -c "%Y" ${dest_dist_dir}/cookbook.zip > ${dest_dist_dir}/cookbook-mod-time
@@ -254,4 +255,3 @@ else
   echo -e "\nERROR! Unable to get the modification timestamp of '${dest_dist_dir}/cookbook.zip'.\n"
   exit 1
 fi
-popd
