@@ -222,5 +222,13 @@ mkdir -p ${dest_dist_dir}
 rm -fr ${dest_dist_dir}/cookbook.zip
 pushd ${dist_dir}/cookbook
 zip -ur ${dest_dist_dir}/cookbook.zip .
-stat -t "%s" -f "%Sm" ${dest_dist_dir}/cookbook.zip > ${dest_dist_dir}/cookbook-mod-time
+
+if [[ $current_os == linux_amd64 ]]; then
+  stat -t -c "%Y" ${dest_dist_dir}/cookbook.zip > ${dest_dist_dir}/cookbook-mod-time
+elif [[ $current_os == darwin_amd64 ]]; then
+  stat -t "%s" -f "%Sm" ${dest_dist_dir}/cookbook.zip > ${dest_dist_dir}/cookbook-mod-time
+else
+  echo -e "\nERROR! Unable to get the modification timestamp of '${dest_dist_dir}/cookbook.zip'.\n"
+  exit 1
+fi
 popd
