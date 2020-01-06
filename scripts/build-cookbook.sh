@@ -20,7 +20,7 @@ usage () {
   echo -e "    -n|--name        <RECIPE NAME>       The name of the recipe"
   echo -e "    -i|--iaas        <TARGET IAAS>       The target IaaS of this recipe."
   echo -e "    -o|--os-name     <TARGET OS>         The target OS for which recipe plugins should be download."
-  echo -e "                                         Should be of \"Darwin\", \"Linux\" or \"Windows\"."
+  echo -e "                                         Should be of \"darwin\", \"linux\" or \"windows\"."
   echo -e "    -s|--single                          Only the recipe indicated shoud be added"
   echo -e "    -c|--clean                           Clean build before proceeding"
   echo -e "    -v|--verbose                         Trace shell execution"
@@ -28,10 +28,11 @@ usage () {
 
 recipe_git_branch_or_tag=master
 recipe_iaas=""
-target_os=$(uname)
+target_os=$(go env GOOS)
+target_arch=$(go env GOARCH)
 
 if [[ $# -eq 0 ]]; then
-  usage 
+  usage
   exit 1
 fi
 
@@ -61,6 +62,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     -o|--os-name)
       target_os=$2
+      [[ -n $(echo ":darwin:linux:windows:" | grep ":$target_os:") ]] || (
+        echo "ERROR! Only OS types darwin, linux or windows are supported.";
+        exit 1;
+      )
       shift
       ;;
     -s|--single)
@@ -73,7 +78,7 @@ while [[ $# -gt 0 ]]; do
       debug=1
       ;;
     *)
-      usage 
+      usage
       exit 1
       ;;
   esac
@@ -88,34 +93,47 @@ if [[ -z $recipe_git_project_url ]]; then
   exit 1
 fi
 
-current_os=$(echo "$(uname)" | tr '[:upper:]' '[:lower:]')_amd64
-target_os=$(echo "$target_os" | tr '[:upper:]' '[:lower:]')_amd64
+current_os=$(go env GOOS)
 
-build_dir=${root_dir}/build
+build_dir=${root_dir}/build/cookbook
 recipe_repo_dir=${build_dir}/repos
-dist_dir=${build_dir}/dist
+bin_dir=${build_dir}/bin
+dist_dir=${build_dir}/dist/${target_os}_${target_arch}
 dest_dist_dir=${HOME_DIR:-$home_dir}/dist
-
-[[ -z $clean ]] || (rm -fr $build_dir && rm -fr $dest_dist_dir)
-
 cookbook_bin_dir=${dist_dir}/cookbook/bin
-cookbook_plugins_dir=${dist_dir}/cookbook/bin/plugins/${target_os}
-mkdir -p $cookbook_plugins_dir
+cookbook_plugins_dir=${dist_dir}/cookbook/bin/plugins/${target_os}_${target_arch}
 
-terraform=${cookbook_bin_dir}/terraform
+[[ -z $clean ]] || (rm -fr $dist_dir && rm -fr $dest_dist_dir)
+
+terraform_version=${TERRAFORM_VERSION:-0.12.17}
+
+mkdir -p $bin_dir
+terraform=${bin_dir}/terraform
 if [[ ! -e $terraform ]]; then
+  curl \
+    -L https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_${current_os}_${target_arch}.zip \
+    -o ${bin_dir}/terraform.zip
 
-  version=${TERRAFORM_VERSION:-0.12.17}
-  if [[ $(uname) == Darwin ]]; then
-    DOWNLOAD_URL=https://releases.hashicorp.com/terraform/${version}/terraform_${version}_darwin_amd64.zip
-  else
-    DOWNLOAD_URL=https://releases.hashicorp.com/terraform/${version}/terraform_${version}_linux_amd64.zip
-  fi
-  curl -L $DOWNLOAD_URL -o $cookbook_bin_dir/terraform.zip
-  
+  pushd $bin_dir
+  unzip -o terraform.zip
+  rm -f terraform.zip
+  popd
+fi
+
+mkdir -p $cookbook_plugins_dir
+if [[ $target_os == windows ]]; then
+  cookbook_terraform_binary=${cookbook_bin_dir}/terraform.exe
+else
+  cookbook_terraform_binary=${cookbook_bin_dir}/terraform
+fi
+if [[ ! -e $cookbook_terraform_binary ]]; then
+  curl \
+    -L https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_${target_os}_${target_arch}.zip \
+    -o ${cookbook_bin_dir}/terraform.zip
+
   pushd $cookbook_bin_dir
-  unzip terraform.zip
-  rm -f terraform.zip  
+  unzip -o terraform.zip
+  rm -f terraform.zip
   popd
 fi
 
@@ -129,9 +147,9 @@ if [[ -n $recipe_git_project_url ]]; then
   else
     url_path=${recipe_git_project_url#http://*}
   fi
-  
+
   git_server=${url_path%%/*}
-  repo_path=${url_path#*/} 
+  repo_path=${url_path#*/}
 
   if [[ $git_server == http* || $repo_path == http* ]]; then
     echo "Unable to determine repo path. Please provide the git server name to allow the path to parsed properly."
@@ -174,35 +192,40 @@ if [[ -n $recipe_git_project_url ]]; then
         exit 1
       fi
       set -e
-      cd 
+      cd
 
-      # initialize terraform templates in order to 
+      # initialize terraform templates in order to
       # download the dependent plugins and modules
       pushd $recipe_folder
       $terraform init -backend=false
       popd
 
-      # consolidate download terraform plugins in 
+      # consolidate download terraform plugins in
       # plugins folder
       pushd $cookbook_plugins_dir
-      for f in $(ls ${recipe_folder}/.terraform/plugins/${current_os}/terraform-provider-*); do
+      for f in $(ls ${recipe_folder}/.terraform/plugins/${current_os}_${target_arch}/terraform-provider-*); do
         name=$(basename $f)
-        name=${name%*_x4}
+        name_x=x${name#*_x*}
+        name=${name%*_x*}
         provider_name=${name%%_*}
         version=${name#*_}
         version=${version#v*}
 
-        plugin_file_name=${provider_name}_v${version}_x4
+        if [[ $target_os == windows ]]; then
+          plugin_file_name=${provider_name}_v${version}_${name_x}.exe
+        else
+          plugin_file_name=${provider_name}_v${version}_${name_x}
+        fi
         if [[ ! -e ${cookbook_plugins_dir}/${plugin_file_name} ]]; then
 
           if [[ $target_os == $current_os ]]; then
             cp $f $cookbook_plugins_dir
           else
             curl \
-              -L https://releases.hashicorp.com/${provider_name}/${version}/${provider_name}_${version}_${target_os}.zip \
+              -L https://releases.hashicorp.com/${provider_name}/${version}/${provider_name}_${version}_${target_os}_${target_arch}.zip \
               -o terraform-provider.zip
 
-            unzip terraform-provider.zip
+            unzip -o terraform-provider.zip
             rm terraform-provider.zip
           fi
         fi
@@ -223,9 +246,9 @@ rm -fr ${dest_dist_dir}/cookbook.zip
 pushd ${dist_dir}/cookbook
 zip -ur ${dest_dist_dir}/cookbook.zip .
 
-if [[ $current_os == linux_amd64 ]]; then
+if [[ $current_os == linux ]]; then
   stat -t -c "%Y" ${dest_dist_dir}/cookbook.zip > ${dest_dist_dir}/cookbook-mod-time
-elif [[ $current_os == darwin_amd64 ]]; then
+elif [[ $current_os == darwin ]]; then
   stat -t "%s" -f "%Sm" ${dest_dist_dir}/cookbook.zip > ${dest_dist_dir}/cookbook-mod-time
 else
   echo -e "\nERROR! Unable to get the modification timestamp of '${dest_dist_dir}/cookbook.zip'.\n"
