@@ -64,8 +64,9 @@ func NewCookbook(
 	addMetadata := func(file string) error {
 
 		var (
-			match bool
-			rr    map[string]Recipe
+			match   bool
+			rr      map[string]Recipe
+			cliPath string
 		)
 
 		if match, err = regexp.Match("^recipes/.*/\\.terraform/?$", []byte(file)); match {
@@ -82,6 +83,11 @@ func NewCookbook(
 					c.recipes[name] = rr
 				}
 
+				if runtime.GOOS == "windows" {
+					cliPath = filepath.Join(c.path, "bin", "terraform.exe")
+				} else {
+					cliPath = filepath.Join(c.path, "bin", "terraform")
+				}
 				if r, err = NewRecipe(
 					name,
 					iaas,
@@ -89,7 +95,7 @@ func NewCookbook(
 					filepath.Join(c.path, "bin", "plugins",
 						fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH),
 					),
-					filepath.Join(c.path, "bin", "terraform"),
+					cliPath,
 					filepath.Join(workspacePath, "run", pathSuffix),
 				); err != nil {
 					return err
