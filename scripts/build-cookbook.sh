@@ -165,10 +165,8 @@ if [[ -n $recipe_git_project_url ]]; then
     pushd ${recipe_repo_dir}/${repo_name}
     git checkout $recipe_git_branch_or_tag
 
-    # ignore error if a tag has been checked out
-    set +e
-    git pull 2>&1 >/dev/null
-    set -e
+    # do not pull tags
+    [[ $recipe_git_branch_or_tag =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]] || git pull
   else
     git clone https://${git_server}/${repo_org}/${repo_name} ${recipe_repo_dir}/${repo_name}
     pushd ${recipe_repo_dir}/${repo_name}
