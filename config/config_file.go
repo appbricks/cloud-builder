@@ -218,8 +218,8 @@ func (cf *configFile) Save() error {
 	// file mod times are in seconds so retrieve
 	// timestamp as seconds and convert to nanos
 	// for use as the seed
-	now := time.Now().Local()
-	timestamp := now.Unix() * 1e9
+	now := time.Unix(time.Now().Local().Unix(), 0)
+	timestamp := now.UnixNano()
 
 	// save config context
 	if err = cf.context.Save(&contextOutput); err != nil {
@@ -279,6 +279,14 @@ func (cf *configFile) Save() error {
 
 	logger.TraceMessage("Config saved to: %s (seed time %s)", cf.path, now.String())
 	return nil
+}
+
+func (cf *configFile) EULAAccepted() bool {
+	return cf.GetBool("eulaaccepted")
+}
+
+func (cf *configFile) SetEULAAccepted() {
+	cf.Set("eulaaccepted", true)
 }
 
 func (cf *configFile) Initialized() bool {

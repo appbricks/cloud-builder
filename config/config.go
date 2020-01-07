@@ -14,6 +14,9 @@ type Config interface {
 	Load() error
 	Save() error
 
+	EULAAccepted() bool
+	SetEULAAccepted()
+
 	Initialized() bool
 	SetInitialized()
 
