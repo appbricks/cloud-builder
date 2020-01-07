@@ -102,8 +102,10 @@ dist_dir=${build_dir}/dist/${target_os}_${target_arch}
 dest_dist_dir=${HOME_DIR:-$home_dir}/dist
 cookbook_bin_dir=${dist_dir}/bin
 cookbook_plugins_dir=${dist_dir}/bin/plugins/${target_os}_${target_arch}
+cookbook_dist_zip=${build_dir}/dist/cookbook-${target_os}_${target_arch}.zip
 
-[[ -z $clean ]] || (rm -fr $dist_dir && rm -fr $dest_dist_dir)
+[[ -z $clean ]] || \
+  (rm -fr $dist_dir && rm -fr $dest_dist_dir && rm -f $cookbook_dist_zip)
 
 terraform_version=${TERRAFORM_VERSION:-0.12.17}
 
@@ -244,9 +246,10 @@ if [[ -n $recipe_git_project_url ]]; then
 fi
 
 mkdir -p ${dest_dist_dir}
-rm -fr ${dest_dist_dir}/cookbook.zip
+rm -f ${dest_dist_dir}/cookbook.zip
 pushd ${dist_dir}
-zip -ur ${dest_dist_dir}/cookbook.zip .
+zip -ur $cookbook_dist_zip . -x "*.git*"
+cp $cookbook_dist_zip ${dest_dist_dir}/cookbook.zip
 popd
 
 if [[ $current_os == linux ]]; then
