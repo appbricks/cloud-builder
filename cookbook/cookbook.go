@@ -37,7 +37,7 @@ type CookbookRecipeInfo struct {
 }
 
 var recipePathMatcher = regexp.MustCompile(
-	fmt.Sprintf("^recipes%c.*%c\\.terraform%c?$",
+	fmt.Sprintf("^recipes\\%c.*\\%c\\.terraform\\%c?$",
 		os.PathSeparator, os.PathSeparator, os.PathSeparator,
 	),
 )
