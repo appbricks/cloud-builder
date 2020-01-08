@@ -36,6 +36,13 @@ type CookbookRecipeInfo struct {
 	IaaSList []provider.CloudProvider
 }
 
+var recipePathMatcher = regexp.MustCompile(
+	fmt.Sprintf("^recipes%c.*%c\\.terraform%c?$",
+		os.PathSeparator, os.PathSeparator, os.PathSeparator,
+	),
+)
+var filePathSeparator = fmt.Sprintf("%c", os.PathSeparator)
+
 func NewCookbook(
 	box *packr.Box,
 	workspacePath string,
@@ -69,9 +76,9 @@ func NewCookbook(
 			cliPath string
 		)
 
-		if match, err = regexp.Match("^recipes/.*/\\.terraform/?$", []byte(file)); match {
+		if match = recipePathMatcher.Match([]byte(file)); match {
 
-			elems := strings.Split(file, "/")
+			elems := strings.Split(file, filePathSeparator)
 			if len(elems) >= 4 {
 				pathSuffix := filepath.Join(elems[0], elems[1], elems[2])
 
@@ -105,7 +112,7 @@ func NewCookbook(
 				rr[iaas] = r
 			}
 		}
-		return err
+		return nil
 	}
 
 	info, err := os.Stat(c.path)
