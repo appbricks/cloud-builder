@@ -17,7 +17,7 @@ type Input struct {
 
 type Output struct {
 	Sensitive bool
-	Type      string
+	Type      interface{}
 	Value     interface{}
 }
 
