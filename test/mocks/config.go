@@ -31,6 +31,13 @@ func (mc *MockConfig) Initialized() bool {
 func (mc *MockConfig) SetInitialized() {
 }
 
+func (mc *MockConfig) EULAAccepted() bool {
+	return true
+}
+
+func (mc *MockConfig) SetEULAAccepted() {
+}
+
 func (mc *MockConfig) HasPassphrase() bool {
 	return false
 }
