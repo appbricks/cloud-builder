@@ -9,12 +9,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/appbricks/cloud-builder/terraform"
 	"github.com/mevansam/goforms/config"
 	"github.com/mevansam/goforms/forms"
 	"github.com/mevansam/goutils/logger"
 	"github.com/mevansam/goutils/run"
 	"github.com/mevansam/goutils/utils"
-	"github.com/appbricks/cloud-builder/terraform"
 
 	forms_config "github.com/appbricks/cloud-builder/forms"
 )
@@ -70,7 +70,8 @@ type recipe struct {
 	tfConfigPath,
 	tfPluginPath,
 	tfCLIPath,
-	workingDirectory string
+	workingDirectory,
+	versionTimestamp string
 }
 
 func NewRecipe(
@@ -79,7 +80,8 @@ func NewRecipe(
 	tfConfigPath,
 	tfPluginPath,
 	tfCLIPath,
-	workingDirectory string,
+	workingDirectory,
+	versionTimestamp string,
 ) (Recipe, error) {
 
 	var (
@@ -109,6 +111,8 @@ func NewRecipe(
 		tfPluginPath:     tfPluginPath,
 		tfCLIPath:        tfCLIPath,
 		workingDirectory: workingDirectory,
+
+		versionTimestamp: versionTimestamp,
 	}
 	for _, f := range reader.InputForm().InputFields() {
 		recipe.variables[f.Name()] = &Variable{

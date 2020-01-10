@@ -104,6 +104,7 @@ func NewCookbook(
 					),
 					cliPath,
 					filepath.Join(workspacePath, "run", pathSuffix),
+					cookbookTimestamp,
 				); err != nil {
 					return err
 				}

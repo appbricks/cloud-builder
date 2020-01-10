@@ -12,12 +12,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/mevansam/gocloud/provider"
 	"github.com/mevansam/goforms/forms"
 	"github.com/mevansam/goforms/ux"
 	"github.com/mevansam/goutils/logger"
 	"github.com/mevansam/goutils/term"
-	"github.com/appbricks/cloud-builder/cookbook"
 
 	test_data "github.com/appbricks/cloud-builder/test/data"
 )
@@ -40,7 +40,7 @@ var _ = Describe("Recipe", func() {
 		testRecipePath, err = filepath.Abs(fmt.Sprintf("%s/../test/fixtures/recipes/basic/azure", sourceDirPath))
 		Expect(err).NotTo(HaveOccurred())
 
-		r, err = cookbook.NewRecipe("basic", "azure", testRecipePath, "", "", "")
+		r, err = cookbook.NewRecipe("basic", "azure", testRecipePath, "", "", "", "")
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(Equal("backend type 'error' is not supported"))
 	})
@@ -50,7 +50,7 @@ var _ = Describe("Recipe", func() {
 		testRecipePath, err = filepath.Abs(fmt.Sprintf("%s/../test/fixtures/recipes/basic/google", sourceDirPath))
 		Expect(err).NotTo(HaveOccurred())
 
-		r, err = cookbook.NewRecipe("basic", "google", testRecipePath, "", "", "")
+		r, err = cookbook.NewRecipe("basic", "google", testRecipePath, "", "", "", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r.BackendType()).To(Equal("gcs"))
 	})
@@ -68,7 +68,7 @@ var _ = Describe("Recipe", func() {
 			testRecipePath, err = filepath.Abs(fmt.Sprintf("%s/../test/fixtures/recipes/basic/aws", sourceDirPath))
 			Expect(err).NotTo(HaveOccurred())
 
-			r, err = cookbook.NewRecipe("basic", "aws", testRecipePath, "", "", "")
+			r, err = cookbook.NewRecipe("basic", "aws", testRecipePath, "", "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
