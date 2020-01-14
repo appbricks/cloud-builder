@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/mevansam/goutils/run"
-	"github.com/mevansam/goutils/utils"
+	"github.com/mevansam/goutils/streams"
 )
 
 type Input struct {
@@ -125,7 +125,7 @@ func (r *Runner) Apply(
 	var (
 		err     error
 		argList []string
-		filter  utils.Filter
+		filter  streams.Filter
 	)
 
 	if argList, err = r.prepareArgList(
@@ -198,7 +198,7 @@ func (r *Runner) GetOutput() (map[string]Output, error) {
 
 	var (
 		err    error
-		filter utils.Filter
+		filter streams.Filter
 	)
 
 	// eat all output sent to default

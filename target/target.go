@@ -45,12 +45,21 @@ type Target struct {
 }
 
 type managedInstance struct {
-	Name string
-
 	Instance cloud.ComputeInstance
 	Metadata map[string]interface{}
 
 	order int
+
+	// recipe state output values
+	// these can be IaaS specific
+	id,
+	name,
+	fqdn,
+	publicIP,
+	sshPort,
+	sshUser,
+	sshKey,
+	rootPasswd string
 }
 
 func NewTarget(
@@ -81,12 +90,24 @@ func (t *Target) LoadRemoteRefs() error {
 		instance       *managedInstance
 		cloudInstances []cloud.ComputeInstance
 
-		value interface{}
-		name  string
-		order float64
+		value    interface{}
+		order    float64
+		keyValue string
 
 		instanceRef map[string]*managedInstance
 	)
+
+	readKeyValue := func(key string) (string, error) {
+		if value, ok = instanceMetaData[key]; !ok {
+			return "",
+				fmt.Errorf("managed instance metadata did no contain a '%s' key", key)
+		}
+		if keyValue, ok = value.(string); !ok {
+			return "",
+				fmt.Errorf("managed instance metadata '%s' key value is not a string", key)
+		}
+		return keyValue, nil
+	}
 
 	if t.compute == nil {
 		if err = t.Provider.Connect(); err != nil {
@@ -104,30 +125,17 @@ func (t *Target) LoadRemoteRefs() error {
 			}
 
 			numInstance := len(managedInstanceValues)
-			instanceRef = make(map[string]*managedInstance)
 			t.managedInstances = make([]*managedInstance, 0, numInstance)
+
 			ids := make([]string, numInstance)
+			instanceRef = make(map[string]*managedInstance)
 
 			for i, managedInstanceValue := range managedInstanceValues {
 				if instanceMetaData, ok = managedInstanceValue.(map[string]interface{}); !ok {
 					return fmt.Errorf("managed instance metadata value is not a map of key value pairs")
 				}
 
-				if value, ok = instanceMetaData["id"]; !ok {
-					return fmt.Errorf("managed instance metadata did no contain an id key")
-				}
-				if ids[i], ok = value.(string); !ok {
-					return fmt.Errorf("managed instance metadata id key value is not a string")
-				}
-
-				if value, ok = instanceMetaData["name"]; !ok {
-					return fmt.Errorf("managed instance metadata did no contain a name key")
-				}
-				if name, ok = value.(string); !ok {
-					return fmt.Errorf("managed instance metadata name key value is not a string")
-				}
 				instance = &managedInstance{
-					Name:     name,
 					Metadata: instanceMetaData,
 					order:    math.MaxInt64,
 				}
@@ -137,6 +145,29 @@ func (t *Target) LoadRemoteRefs() error {
 					}
 					instance.order = int(order)
 				}
+				if instance.id, err = readKeyValue("id"); err != nil {
+					return err
+				}
+				if instance.name, err = readKeyValue("name"); err != nil {
+					return err
+				}
+				if instance.publicIP, err = readKeyValue("public_ip"); err != nil {
+					return err
+				}
+				if instance.sshPort, err = readKeyValue("ssh_port"); err != nil {
+					return err
+				}
+				if instance.sshUser, err = readKeyValue("ssh_user"); err != nil {
+					return err
+				}
+				if instance.sshKey, err = readKeyValue("ssh_key"); err != nil {
+					return err
+				}
+				if instance.rootPasswd, err = readKeyValue("root_passwd"); err != nil {
+					return err
+				}
+
+				ids[i] = instance.id
 				instanceRef[ids[i]] = instance
 
 				// insert instance into managed instance list in order
@@ -144,7 +175,7 @@ func (t *Target) LoadRemoteRefs() error {
 					managedInstance := t.managedInstances[j]
 					return managedInstance.order > instance.order ||
 						(managedInstance.order == instance.order &&
-							strings.Compare(managedInstance.Name, instance.Name) == 1)
+							strings.Compare(managedInstance.name, instance.name) == 1)
 				})
 				t.managedInstances = append(t.managedInstances, instance)
 				if len(t.managedInstances) > 1 {
@@ -264,6 +295,16 @@ func (t *Target) Status() TargetState {
 	}
 }
 
+func (t *Target) ManagedInstance(name string) *managedInstance {
+
+	for _, managedInstance := range t.managedInstances {
+		if managedInstance.name == name {
+			return managedInstance
+		}
+	}
+	return nil
+}
+
 // returns a copy of this target
 func (t *Target) Copy() (*Target, error) {
 
@@ -329,4 +370,34 @@ func (t *Target) NewBuilder(outputBuffer, errorBuffer io.Writer) (*Builder, erro
 		t.Backend,
 		outputBuffer,
 		errorBuffer)
+}
+
+// managedInstance functions
+
+func (i *managedInstance) Name() string {
+	return i.name
+}
+
+func (i *managedInstance) PublicIP() string {
+	return i.Instance.PublicIP()
+}
+
+func (i *managedInstance) FQDN() string {
+	return i.fqdn
+}
+
+func (i *managedInstance) SSHAddress() string {
+	return fmt.Sprintf("%s:%s", i.publicIP, i.sshPort)
+}
+
+func (i *managedInstance) SSHUser() string {
+	return i.sshUser
+}
+
+func (i *managedInstance) SSHKey() []byte {
+	return []byte(i.sshKey)
+}
+
+func (i *managedInstance) RootPassword() string {
+	return i.rootPasswd
 }
