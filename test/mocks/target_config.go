@@ -3,10 +3,10 @@ package mocks
 import (
 	"fmt"
 
-	"github.com/mevansam/gocloud/backend"
-	"github.com/mevansam/gocloud/provider"
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/target"
+	"github.com/mevansam/gocloud/backend"
+	"github.com/mevansam/gocloud/provider"
 )
 
 type FakeTargetContext struct {
@@ -38,7 +38,7 @@ func (mctx *FakeTargetContext) NewTarget(
 		recipeName,
 		recipeIaas,
 		fmt.Sprintf("%s/%s/%s", mctx.recipePath, recipeName, recipeIaas),
-		"", "", ""); err != nil {
+		"", "", "", ""); err != nil {
 		return nil, err
 	}
 	if p, err = provider.NewCloudProvider(recipeIaas); err != nil {

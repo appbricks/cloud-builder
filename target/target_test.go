@@ -6,18 +6,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/appbricks/cloud-builder/cookbook"
+	"github.com/appbricks/cloud-builder/target"
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/provider"
 	"github.com/mevansam/goforms/forms"
 	"github.com/mevansam/goutils/utils"
-	"github.com/appbricks/cloud-builder/cookbook"
-	"github.com/appbricks/cloud-builder/target"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	cloud_test_data "github.com/mevansam/gocloud/test/data"
 	test_data "github.com/appbricks/cloud-builder/test/data"
+	cloud_test_data "github.com/mevansam/gocloud/test/data"
 )
 
 var _ = Describe("Target", func() {
@@ -46,7 +46,7 @@ var _ = Describe("Target", func() {
 
 		testRecipePath, err = filepath.Abs(fmt.Sprintf("%s/../test/fixtures/recipes/basic/aws", sourceDirPath))
 		Expect(err).NotTo(HaveOccurred())
-		r, err = cookbook.NewRecipe("basic", "aws", testRecipePath, "", "", "")
+		r, err = cookbook.NewRecipe("basic", "aws", testRecipePath, "", "", "", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		p, err = provider.NewCloudProvider("aws")
