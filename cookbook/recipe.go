@@ -365,14 +365,20 @@ func (r *recipe) Copy() (config.Configurable, error) {
 		description: r.description,
 
 		variables: make(map[string]*Variable),
+		keyFields: r.keyFields,
+
+		isBastion:                r.isBastion,
+		resourceInstanceList:     r.resourceInstanceList,
+		resourceInstanceDataList: r.resourceInstanceDataList,
 
 		backendType: r.backendType,
-		keyFields:   r.keyFields,
 
 		tfConfigPath:     r.tfConfigPath,
 		tfPluginPath:     r.tfPluginPath,
 		tfCLIPath:        r.tfCLIPath,
 		workingDirectory: r.workingDirectory,
+
+		versionTimestamp: r.versionTimestamp,
 	}
 
 	for k, v := range r.variables {
