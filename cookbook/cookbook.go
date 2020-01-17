@@ -53,17 +53,19 @@ func NewCookbook(
 		err error
 		ok  bool
 
+		cookbookTimestamp string
+
 		c *Cookbook
 		r Recipe
 	)
 
-	cookbookTimestamp, err := box.FindString(cookbookModTime)
-	if err != nil {
+	if cookbookTimestamp, err = box.FindString(cookbookModTime); err != nil {
 		return nil, err
 	}
+	cookbookTimestamp = strings.Trim(cookbookTimestamp, "\n")
 
 	c = &Cookbook{
-		path:    filepath.Join(workspacePath, "cookbook", strings.Trim(cookbookTimestamp, "\n")),
+		path:    filepath.Join(workspacePath, "cookbook", cookbookTimestamp),
 		recipes: make(map[string]map[string]Recipe),
 	}
 

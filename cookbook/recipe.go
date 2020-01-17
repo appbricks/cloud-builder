@@ -45,6 +45,8 @@ type Recipe interface {
 	ResourceInstanceDataList() []string
 
 	BackendType() string
+
+	CookbookTimestamp() string
 }
 
 type Variable struct {
@@ -71,7 +73,7 @@ type recipe struct {
 	tfPluginPath,
 	tfCLIPath,
 	workingDirectory,
-	versionTimestamp string
+	cookbookTimestamp string
 }
 
 func NewRecipe(
@@ -81,7 +83,7 @@ func NewRecipe(
 	tfPluginPath,
 	tfCLIPath,
 	workingDirectory,
-	versionTimestamp string,
+	cookbookTimestamp string,
 ) (Recipe, error) {
 
 	var (
@@ -112,7 +114,7 @@ func NewRecipe(
 		tfCLIPath:        tfCLIPath,
 		workingDirectory: workingDirectory,
 
-		versionTimestamp: versionTimestamp,
+		cookbookTimestamp: cookbookTimestamp,
 	}
 	for _, f := range reader.InputForm().InputFields() {
 		recipe.variables[f.Name()] = &Variable{
@@ -316,6 +318,12 @@ func (r *recipe) BackendType() string {
 	return r.backendType
 }
 
+// out: the version timestamp of the cookbook this recipe is
+//      associated with.
+func (r *recipe) CookbookTimestamp() string {
+	return r.cookbookTimestamp
+}
+
 // interface: config/Config functions for base cloud provider
 
 func (r *recipe) Name() string {
@@ -378,7 +386,7 @@ func (r *recipe) Copy() (config.Configurable, error) {
 		tfCLIPath:        r.tfCLIPath,
 		workingDirectory: r.workingDirectory,
 
-		versionTimestamp: r.versionTimestamp,
+		cookbookTimestamp: r.cookbookTimestamp,
 	}
 
 	for k, v := range r.variables {

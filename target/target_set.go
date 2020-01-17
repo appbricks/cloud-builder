@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/appbricks/cloud-builder/terraform"
 	"github.com/mevansam/goutils/logger"
 	"github.com/mevansam/goutils/utils"
-	"github.com/appbricks/cloud-builder/terraform"
 )
 
 type TargetSet struct {
@@ -128,6 +128,8 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		Backend  json.RawMessage `json:"backend"`
 
 		Output *map[string]terraform.Output `json:"output,omitempty"`
+
+		CookbookTimestamp string `json:"cookbook_timestamp"`
 	}{}
 
 	decoder := json.NewDecoder(bytes.NewReader(b))
@@ -158,6 +160,7 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 			return err
 		}
 		target.Output = parsedTarget.Output
+		target.CookbookTimestamp = parsedTarget.CookbookTimestamp
 
 		ts.targets[target.Key()] = target
 	}

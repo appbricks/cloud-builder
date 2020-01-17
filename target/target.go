@@ -43,7 +43,11 @@ type Target struct {
 
 	Output *map[string]terraform.Output `json:"output,omitempty"`
 
-	description      string
+	CookbookTimestamp string `json:"cookbook_timestamp,omitempty"`
+
+	description string
+	version     string
+
 	managedInstances []*managedInstance
 	compute          cloud.Compute
 }
@@ -127,6 +131,11 @@ func (t *Target) LoadRemoteRefs() error {
 		if output, ok = (*t.Output)["cb_node_description"]; ok {
 			if t.description, ok = output.Value.(string); !ok {
 				return fmt.Errorf("node description key value is not a string")
+			}
+		}
+		if output, ok = (*t.Output)["cb_bastion_version"]; ok {
+			if t.version, ok = output.Value.(string); !ok {
+				return fmt.Errorf("node version key value is not a string")
 			}
 		}
 		if output, ok = (*t.Output)["cb_managed_instances"]; ok {
@@ -233,6 +242,10 @@ func (t *Target) Key() string {
 
 func (t *Target) Description() string {
 	return t.description
+}
+
+func (t *Target) Version() string {
+	return t.version
 }
 
 func (t *Target) DeploymentName() string {
@@ -389,6 +402,8 @@ func (t *Target) Copy() (*Target, error) {
 		Backend:  backendCopy.(backend.CloudBackend),
 
 		Output: t.Output,
+
+		CookbookTimestamp: t.CookbookTimestamp,
 	}, nil
 }
 
