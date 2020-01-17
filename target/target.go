@@ -17,6 +17,9 @@ import (
 	"github.com/mevansam/goforms/config"
 )
 
+// Instance state callback
+type InstanceStateChange func(name string, instance cloud.ComputeInstance)
+
 // Input types
 type TargetState int
 
@@ -40,6 +43,7 @@ type Target struct {
 
 	Output *map[string]terraform.Output `json:"output,omitempty"`
 
+	description      string
 	managedInstances []*managedInstance
 	compute          cloud.Compute
 }
@@ -54,6 +58,7 @@ type managedInstance struct {
 	// these can be IaaS specific
 	id,
 	name,
+	description,
 	fqdn,
 	publicIP,
 	sshPort,
@@ -83,9 +88,10 @@ func (t *Target) LoadRemoteRefs() error {
 		err error
 		ok  bool
 
-		managedInstancesOutput terraform.Output
-		managedInstanceValues  []interface{}
-		instanceMetaData       map[string]interface{}
+		output terraform.Output
+
+		managedInstanceValues []interface{}
+		instanceMetaData      map[string]interface{}
 
 		instance       *managedInstance
 		cloudInstances []cloud.ComputeInstance
@@ -118,9 +124,14 @@ func (t *Target) LoadRemoteRefs() error {
 		}
 	}
 	if t.Output != nil {
-		if managedInstancesOutput, ok = (*t.Output)["cb_managed_instances"]; ok {
+		if output, ok = (*t.Output)["cb_node_description"]; ok {
+			if t.description, ok = output.Value.(string); !ok {
+				return fmt.Errorf("node description key value is not a string")
+			}
+		}
+		if output, ok = (*t.Output)["cb_managed_instances"]; ok {
 
-			if managedInstanceValues, ok = managedInstancesOutput.Value.([]interface{}); !ok {
+			if managedInstanceValues, ok = output.Value.([]interface{}); !ok {
 				return fmt.Errorf("managed instance output is not a list")
 			}
 
@@ -149,6 +160,9 @@ func (t *Target) LoadRemoteRefs() error {
 					return err
 				}
 				if instance.name, err = readKeyValue("name"); err != nil {
+					return err
+				}
+				if instance.description, err = readKeyValue("description"); err != nil {
 					return err
 				}
 				if instance.publicIP, err = readKeyValue("public_ip"); err != nil {
@@ -218,12 +232,7 @@ func (t *Target) Key() string {
 }
 
 func (t *Target) Description() string {
-	return fmt.Sprintf(
-		"Deployment \"%s\" on Cloud \"%s\" and Region \"%s\"",
-		t.DeploymentName(),
-		t.Provider.Name(),
-		*t.Provider.Region(),
-	)
+	return t.description
 }
 
 func (t *Target) DeploymentName() string {
@@ -295,6 +304,10 @@ func (t *Target) Status() TargetState {
 	}
 }
 
+func (t *Target) ManagedInstances() []*managedInstance {
+	return t.managedInstances
+}
+
 func (t *Target) ManagedInstance(name string) *managedInstance {
 
 	for _, managedInstance := range t.managedInstances {
@@ -302,6 +315,48 @@ func (t *Target) ManagedInstance(name string) *managedInstance {
 			return managedInstance
 		}
 	}
+	return nil
+}
+
+func (t *Target) Resume(cb InstanceStateChange) error {
+
+	var (
+		err error
+	)
+
+	if t.Status() == Shutdown {
+		for _, managedInstance := range t.managedInstances {
+			cb(managedInstance.name, managedInstance.Instance)
+			if err = managedInstance.Instance.Start(); err != nil {
+				return err
+			}
+			cb(managedInstance.name, managedInstance.Instance)
+		}
+	} else {
+		return fmt.Errorf("target is not in a 'shutdown' state")
+	}
+
+	return nil
+}
+
+func (t *Target) Suspend(cb InstanceStateChange) error {
+
+	var (
+		err error
+	)
+
+	if t.Status() == Running {
+		for _, managedInstance := range t.managedInstances {
+			cb(managedInstance.name, managedInstance.Instance)
+			if err = managedInstance.Instance.Stop(); err != nil {
+				return err
+			}
+			cb(managedInstance.name, managedInstance.Instance)
+		}
+	} else {
+		return fmt.Errorf("target is not in a 'shutdown' state")
+	}
+
 	return nil
 }
 
@@ -332,6 +387,8 @@ func (t *Target) Copy() (*Target, error) {
 		Recipe:   recipeCopy.(cookbook.Recipe),
 		Provider: providerCopy.(provider.CloudProvider),
 		Backend:  backendCopy.(backend.CloudBackend),
+
+		Output: t.Output,
 	}, nil
 }
 
@@ -376,6 +433,10 @@ func (t *Target) NewBuilder(outputBuffer, errorBuffer io.Writer) (*Builder, erro
 
 func (i *managedInstance) Name() string {
 	return i.name
+}
+
+func (i *managedInstance) Description() string {
+	return i.description
 }
 
 func (i *managedInstance) PublicIP() string {
