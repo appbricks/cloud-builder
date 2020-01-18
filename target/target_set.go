@@ -17,6 +17,22 @@ type TargetSet struct {
 	targets map[string]*Target
 }
 
+// temporary target data structure used
+// when parsing serialized targets in
+// order to resolve the configurable types
+type parsedTarget struct {
+	RecipeName string `json:"recipeName"`
+	RecipeIaas string `json:"recipeIaas"`
+
+	Recipe   json.RawMessage `json:"recipe"`
+	Provider json.RawMessage `json:"provider"`
+	Backend  json.RawMessage `json:"backend"`
+
+	Output *map[string]terraform.Output `json:"output,omitempty"`
+
+	CookbookTimestamp string `json:"cookbook_timestamp"`
+}
+
 // interface definition of global config context
 // specific to TargetSet. declared here to simplify
 // mocking and avoid cyclical dependencies.
@@ -117,21 +133,6 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		target *Target
 	)
 
-	// temporary target data structure used
-	// when parsing serialized targets
-	parsedTarget := struct {
-		RecipeName string `json:"recipeName"`
-		RecipeIaas string `json:"recipeIaas"`
-
-		Recipe   json.RawMessage `json:"recipe"`
-		Provider json.RawMessage `json:"provider"`
-		Backend  json.RawMessage `json:"backend"`
-
-		Output *map[string]terraform.Output `json:"output,omitempty"`
-
-		CookbookTimestamp string `json:"cookbook_timestamp"`
-	}{}
-
 	decoder := json.NewDecoder(bytes.NewReader(b))
 
 	// read array open bracket
@@ -140,6 +141,8 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 	}
 
 	for decoder.More() {
+
+		parsedTarget := parsedTarget{}
 		if err = decoder.Decode(&parsedTarget); err != nil {
 			return err
 		}
