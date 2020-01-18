@@ -48,11 +48,11 @@ type Target struct {
 	description string
 	version     string
 
-	managedInstances []*managedInstance
+	managedInstances []*ManagedInstance
 	compute          cloud.Compute
 }
 
-type managedInstance struct {
+type ManagedInstance struct {
 	Instance cloud.ComputeInstance
 	Metadata map[string]interface{}
 
@@ -97,14 +97,14 @@ func (t *Target) LoadRemoteRefs() error {
 		managedInstanceValues []interface{}
 		instanceMetaData      map[string]interface{}
 
-		instance       *managedInstance
+		instance       *ManagedInstance
 		cloudInstances []cloud.ComputeInstance
 
 		value    interface{}
 		order    float64
 		keyValue string
 
-		instanceRef map[string]*managedInstance
+		instanceRef map[string]*ManagedInstance
 	)
 
 	readKeyValue := func(key string) (string, error) {
@@ -145,17 +145,17 @@ func (t *Target) LoadRemoteRefs() error {
 			}
 
 			numInstance := len(managedInstanceValues)
-			t.managedInstances = make([]*managedInstance, 0, numInstance)
+			t.managedInstances = make([]*ManagedInstance, 0, numInstance)
 
 			ids := make([]string, numInstance)
-			instanceRef = make(map[string]*managedInstance)
+			instanceRef = make(map[string]*ManagedInstance)
 
 			for i, managedInstanceValue := range managedInstanceValues {
 				if instanceMetaData, ok = managedInstanceValue.(map[string]interface{}); !ok {
 					return fmt.Errorf("managed instance metadata value is not a map of key value pairs")
 				}
 
-				instance = &managedInstance{
+				instance = &ManagedInstance{
 					Metadata: instanceMetaData,
 					order:    math.MaxInt64,
 				}
@@ -317,11 +317,11 @@ func (t *Target) Status() TargetState {
 	}
 }
 
-func (t *Target) ManagedInstances() []*managedInstance {
+func (t *Target) ManagedInstances() []*ManagedInstance {
 	return t.managedInstances
 }
 
-func (t *Target) ManagedInstance(name string) *managedInstance {
+func (t *Target) ManagedInstance(name string) *ManagedInstance {
 
 	for _, managedInstance := range t.managedInstances {
 		if managedInstance.name == name {
@@ -446,34 +446,34 @@ func (t *Target) NewBuilder(outputBuffer, errorBuffer io.Writer) (*Builder, erro
 
 // managedInstance functions
 
-func (i *managedInstance) Name() string {
+func (i *ManagedInstance) Name() string {
 	return i.name
 }
 
-func (i *managedInstance) Description() string {
+func (i *ManagedInstance) Description() string {
 	return i.description
 }
 
-func (i *managedInstance) PublicIP() string {
+func (i *ManagedInstance) PublicIP() string {
 	return i.Instance.PublicIP()
 }
 
-func (i *managedInstance) FQDN() string {
+func (i *ManagedInstance) FQDN() string {
 	return i.fqdn
 }
 
-func (i *managedInstance) SSHAddress() string {
+func (i *ManagedInstance) SSHAddress() string {
 	return fmt.Sprintf("%s:%s", i.publicIP, i.sshPort)
 }
 
-func (i *managedInstance) SSHUser() string {
+func (i *ManagedInstance) SSHUser() string {
 	return i.sshUser
 }
 
-func (i *managedInstance) SSHKey() []byte {
+func (i *ManagedInstance) SSHKey() []byte {
 	return []byte(i.sshKey)
 }
 
-func (i *managedInstance) RootPassword() string {
+func (i *ManagedInstance) RootPassword() string {
 	return i.rootPasswd
 }
