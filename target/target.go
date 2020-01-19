@@ -240,6 +240,15 @@ func (t *Target) Key() string {
 	return key.String()
 }
 
+func (t *Target) Name() string {
+	return fmt.Sprintf(
+		"Deployment \"%s\" on Cloud \"%s\" and Region \"%s\"",
+		t.DeploymentName(),
+		t.Provider.Name(),
+		*t.Provider.Region(),
+	)
+}
+
 func (t *Target) Description() string {
 	return t.description
 }
