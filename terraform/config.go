@@ -134,6 +134,8 @@ func (r *configReader) ReadMetadata(
 	var (
 		err error
 
+		info os.FileInfo
+
 		errMessage strings.Builder
 
 		parser *configs.Parser
@@ -146,6 +148,17 @@ func (r *configReader) ReadMetadata(
 
 		defaultValue *string
 	)
+
+	logger.DebugMessage(
+		"Loading Terraform templates for recipe '%s' and iaas '%s' at path '%s'.",
+		name, iaas, configPath,
+	)
+	if info, err = os.Stat(configPath); err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("template path '%s' is not a directory", configPath)
+	}
 
 	// load terraform module
 	parser = configs.NewParser(nil)
