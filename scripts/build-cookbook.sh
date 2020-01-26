@@ -238,7 +238,7 @@ if [[ -n $recipe_git_project_url ]]; then
 
       rm -fr ${cookbook_recipes_dir}/${recipe}/${iaas}
       mkdir -p ${cookbook_recipes_dir}/${recipe}/${iaas}
-      cp -r $recipe_folder ${cookbook_recipes_dir}/${recipe}
+      cp -RLp $recipe_folder ${cookbook_recipes_dir}/${recipe}
       rm -f ${cookbook_recipes_dir}/${recipe}/${iaas}/.terraform/terraform.tfstate
       rm -fr ${cookbook_recipes_dir}/${recipe}/${iaas}/.terraform/plugins
     done
