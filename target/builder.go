@@ -11,6 +11,7 @@ import (
 	"github.com/mevansam/goforms/config"
 	"github.com/mevansam/goforms/forms"
 	"github.com/mevansam/goutils/run"
+
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/terraform"
 )
@@ -93,8 +94,6 @@ func (b *Builder) setEnvVars(runner *terraform.Runner) error {
 		inputForm  forms.InputForm
 		inputField *forms.InputField
 
-		envVars []string
-
 		value *string
 		vars  map[string]string
 	)
@@ -105,23 +104,10 @@ func (b *Builder) setEnvVars(runner *terraform.Runner) error {
 	}
 	vars = make(map[string]string)
 	for _, inputField = range inputForm.InputFields() {
-
-		if value = inputField.Value(); value == nil {
-			return fmt.Errorf(
-				"provider '%s' input field '%s' was nil",
-				b.provider.Name(),
-				inputField.Name())
-		}
-
-		envVars = inputField.EnvVars()
-		if len(envVars) == 0 {
-			return fmt.Errorf(
-				"provider '%s' input field '%s' should have one or more associated environment variables",
-				b.provider.Name(),
-				inputField.Name())
-		}
-		for _, envVar := range envVars {
-			vars[envVar] = *value
+		if value = inputField.Value(); value != nil {
+			for _, envVar := range inputField.EnvVars() {
+				vars[envVar] = *value
+			}
 		}
 	}
 	runner.SetEnv(vars)
