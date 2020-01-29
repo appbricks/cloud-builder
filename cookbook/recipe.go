@@ -8,6 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
+
+	"github.com/otiai10/copy"
 
 	"github.com/appbricks/cloud-builder/terraform"
 	"github.com/mevansam/goforms/config"
@@ -213,20 +216,14 @@ func (r *recipe) CreateCLI(
 
 	recipePluginLink := filepath.Join(r.tfConfigPath, contextFolder, pluginsFolder)
 	runPluginLink := filepath.Join(workingDirectory, contextFolder, pluginsFolder)
-	os.Remove(runPluginLink)
-	if _, err = os.Stat(recipePluginLink); !os.IsNotExist(err) {
-		if err = os.Symlink(recipePluginLink, runPluginLink); err != nil {
-			return nil, err
-		}
+	if err = r.linkRecipeAsset(recipePluginLink, runPluginLink); err != nil {
+		return nil, err
 	}
 
 	recipeModuleLink := filepath.Join(r.tfConfigPath, contextFolder, modulesFolder)
 	runModuleLink := filepath.Join(workingDirectory, contextFolder, modulesFolder)
-	os.Remove(runModuleLink)
-	if _, err = os.Stat(recipeModuleLink); !os.IsNotExist(err) {
-		if err = os.Symlink(recipeModuleLink, runModuleLink); err != nil {
-			return nil, err
-		}
+	if err = r.linkRecipeAsset(recipeModuleLink, runModuleLink); err != nil {
+		return nil, err
 	}
 
 	return run.NewCLI(
@@ -235,6 +232,33 @@ func (r *recipe) CreateCLI(
 		outputBuffer,
 		errorBuffer,
 	)
+}
+
+func (r *recipe) linkRecipeAsset(recipeLink, runLink string) error {
+
+	var (
+		err error
+	)
+
+	if runtime.GOOS == "windows" {
+		// terraform does not follow symlinks in windows
+		os.RemoveAll(runLink)
+		if _, err = os.Stat(recipeLink); !os.IsNotExist(err) {
+			if err = copy.Copy(recipeLink, runLink); err != nil {
+				return err
+			}
+		}
+
+	} else {
+		os.Remove(runLink)
+		if _, err = os.Stat(recipeLink); !os.IsNotExist(err) {
+			if err = os.Symlink(recipeLink, runLink); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // out: terraform configuration template path
