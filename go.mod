@@ -25,6 +25,7 @@ require (
 	github.com/mevansam/goutils v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
+	github.com/otiai10/copy v1.0.2
 	github.com/spf13/viper v1.6.1
 	github.com/zclconf/go-cty v1.1.1
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
