@@ -109,3 +109,7 @@ func (f *FakeRecipe) ResourceInstanceDataList() []string {
 func (f *FakeRecipe) BackendType() string {
 	return "fake"
 }
+
+func (f *FakeRecipe) CookbookTimestamp() string {
+	return "faketimestamp"
+}
