@@ -120,6 +120,7 @@ func (t *Target) LoadRemoteRefs() error {
 	}
 
 	if t.compute == nil {
+		logger.TraceMessage("Connecting to provider '%s'.", t.Provider.Name())
 		if err = t.Provider.Connect(); err != nil {
 			return err
 		}
@@ -128,6 +129,8 @@ func (t *Target) LoadRemoteRefs() error {
 		}
 	}
 	if t.Output != nil {
+		logger.TraceMessage("Target deployment output: %# v", t.Output)
+
 		if output, ok = (*t.Output)["cb_node_description"]; ok {
 			if t.description, ok = output.Value.(string); !ok {
 				return fmt.Errorf("node description key value is not a string")
@@ -207,8 +210,12 @@ func (t *Target) LoadRemoteRefs() error {
 				}
 			}
 
+			logger.TraceMessage("Retrieving managed instances: %# v", ids)
 			if cloudInstances, err = t.compute.GetInstances(ids); err != nil {
 				return err
+			}
+			if len(cloudInstances) == 0 {
+				return fmt.Errorf("unable to lookup managed instances from cloud provider")
 			}
 			for _, cloudInstance := range cloudInstances {
 				instanceRef[cloudInstance.ID()].Instance = cloudInstance
