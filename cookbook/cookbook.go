@@ -125,20 +125,13 @@ func NewCookbook(
 		if err != nil {
 			return nil, err
 		}
-		c.files, err = utils.Unzip([]byte(cookbookZip), c.path)
-		if err != nil {
+		if _, err = utils.Unzip([]byte(cookbookZip), c.path); err != nil {
 			return nil, err
 		}
-		for _, filepath := range c.files {
-			err = addMetadata(filepath)
-			if err != nil {
-				return nil, err
-			}
-		}
-
+		info, _ = os.Stat(c.path)
 		logger.TraceMessage("Unzipped cookbook to %s:\n  %s\n\n", c.path, strings.Join(c.files, "\n  "))
-
-	} else if info.IsDir() {
+	}
+	if info.IsDir() {
 
 		// Retrieve cookbook file list by walking
 		// the extracted cookbook's directory tree
