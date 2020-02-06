@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -109,7 +111,15 @@ func (r *Runner) Plan(
 
 	if argList, err = r.prepareArgList(
 		args,
-		[]string{"plan", "-input=false"},
+		[]string{
+			"plan",
+			"-input=false",
+			fmt.Sprintf(
+				"-out=%s",
+				filepath.Join(r.cli.WorkingDirectory(), "tf.plan"),
+			),
+		},
+		r.configPath,
 	); err != nil {
 		return err
 	}
@@ -123,24 +133,32 @@ func (r *Runner) Apply(
 ) (map[string]Output, error) {
 
 	var (
-		err     error
-		argList []string
-		filter  streams.Filter
+		err    error
+		filter streams.Filter
 	)
 
-	if argList, err = r.prepareArgList(
-		args,
-		[]string{"apply", "-auto-approve", "-input=false"},
-	); err != nil {
+	// create plan if it does not exist
+	planPath := filepath.Join(r.cli.WorkingDirectory(), "tf.plan")
+	if _, err = os.Stat(planPath); os.IsNotExist(err) {
+		err = r.Plan(args)
+	}
+	if err != nil {
 		return nil, err
 	}
+	defer os.RemoveAll(planPath)
 
 	// filter out any outputs from terraform
 	// run which may container sensitive data
 	filter.AddExcludeAfterPattern("Apply complete!")
 	r.cli.ApplyFilter(&filter)
 
-	if err = r.cli.RunWithEnv(argList, r.env); err != nil {
+	if err = r.cli.RunWithEnv(
+		[]string{
+			"apply",
+			planPath,
+		},
+		r.env,
+	); err != nil {
 		return nil, err
 	}
 	return r.GetOutput()
@@ -149,6 +167,7 @@ func (r *Runner) Apply(
 func (r *Runner) prepareArgList(
 	args map[string]string,
 	argList []string,
+	configPath string,
 ) ([]string, error) {
 
 	var (
@@ -190,7 +209,7 @@ func (r *Runner) prepareArgList(
 				strings.Join(missing, ","),
 			)
 	}
-	argList = append(argList, r.configPath)
+	argList = append(argList, configPath)
 	return argList, nil
 }
 
@@ -275,6 +294,8 @@ func (r *Runner) Taint(resources []string) error {
 	var (
 		err error
 	)
+	// ensure plan file if it exists is removed
+	os.RemoveAll(filepath.Join(r.cli.WorkingDirectory(), "tf.plan"))
 
 	for _, resource := range resources {
 		if err = r.cli.RunWithEnv([]string{"taint", resource}, r.env); err != nil {
@@ -285,5 +306,8 @@ func (r *Runner) Taint(resources []string) error {
 }
 
 func (r *Runner) Destroy() error {
+	// ensure plan file if it exists is removed
+	os.RemoveAll(filepath.Join(r.cli.WorkingDirectory(), "tf.plan"))
+
 	return r.cli.RunWithEnv([]string{"destroy", "-auto-approve"}, r.env)
 }
