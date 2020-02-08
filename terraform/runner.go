@@ -43,6 +43,8 @@ type Runner struct {
 	backEnd []string
 }
 
+const tfPlanFileName = `tf.plan`
+
 // in: cli - a CLI instance for the running the Terraform binary
 // in: configPath - the Terraform configuration path
 // in: configInputs - list of input variables expected by the Terraform configuration
@@ -116,7 +118,7 @@ func (r *Runner) Plan(
 			"-input=false",
 			fmt.Sprintf(
 				"-out=%s",
-				filepath.Join(r.cli.WorkingDirectory(), "tf.plan"),
+				filepath.Join(r.cli.WorkingDirectory(), tfPlanFileName),
 			),
 		},
 		r.configPath,
@@ -138,7 +140,7 @@ func (r *Runner) Apply(
 	)
 
 	// create plan if it does not exist
-	planPath := filepath.Join(r.cli.WorkingDirectory(), "tf.plan")
+	planPath := filepath.Join(r.cli.WorkingDirectory(), tfPlanFileName)
 	if _, err = os.Stat(planPath); os.IsNotExist(err) {
 		err = r.Plan(args)
 	}
@@ -155,7 +157,7 @@ func (r *Runner) Apply(
 	if err = r.cli.RunWithEnv(
 		[]string{
 			"apply",
-			planPath,
+			tfPlanFileName,
 		},
 		r.env,
 	); err != nil {
@@ -295,7 +297,7 @@ func (r *Runner) Taint(resources []string) error {
 		err error
 	)
 	// ensure plan file if it exists is removed
-	os.RemoveAll(filepath.Join(r.cli.WorkingDirectory(), "tf.plan"))
+	os.RemoveAll(filepath.Join(r.cli.WorkingDirectory(), tfPlanFileName))
 
 	for _, resource := range resources {
 		if err = r.cli.RunWithEnv([]string{"taint", resource}, r.env); err != nil {
@@ -307,7 +309,7 @@ func (r *Runner) Taint(resources []string) error {
 
 func (r *Runner) Destroy() error {
 	// ensure plan file if it exists is removed
-	os.RemoveAll(filepath.Join(r.cli.WorkingDirectory(), "tf.plan"))
+	os.RemoveAll(filepath.Join(r.cli.WorkingDirectory(), tfPlanFileName))
 
 	return r.cli.RunWithEnv([]string{"destroy", "-auto-approve"}, r.env)
 }
