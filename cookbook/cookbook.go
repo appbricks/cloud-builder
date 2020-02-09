@@ -53,7 +53,9 @@ func NewCookbook(
 		err error
 		ok  bool
 
-		cookbookTimestamp string
+		cookbookTimestamp,
+		tfPluginPath,
+		tfCLIPath string
 
 		c *Cookbook
 		r Recipe
@@ -73,9 +75,8 @@ func NewCookbook(
 	addMetadata := func(file string) error {
 
 		var (
-			match   bool
-			rr      map[string]Recipe
-			cliPath string
+			match bool
+			rr    map[string]Recipe
 		)
 
 		if match = recipePathMatcher.Match([]byte(file)); match {
@@ -91,20 +92,12 @@ func NewCookbook(
 					rr = make(map[string]Recipe)
 					c.recipes[name] = rr
 				}
-
-				if runtime.GOOS == "windows" {
-					cliPath = filepath.Join(c.path, "bin", "terraform.exe")
-				} else {
-					cliPath = filepath.Join(c.path, "bin", "terraform")
-				}
 				if r, err = NewRecipe(
 					name,
 					iaas,
 					filepath.Join(c.path, pathSuffix),
-					filepath.Join(c.path, "bin", "plugins",
-						fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH),
-					),
-					cliPath,
+					tfPluginPath,
+					tfCLIPath,
 					filepath.Join(workspacePath, "run", pathSuffix),
 					cookbookTimestamp,
 				); err != nil {
@@ -133,6 +126,19 @@ func NewCookbook(
 	}
 	if info.IsDir() {
 
+		// embedded cookbook plugin path
+		tfPluginPath = filepath.Join(
+			c.path, "bin", "plugins",
+			fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH),
+		)
+		if runtime.GOOS == "windows" {
+			// windows cli
+			tfCLIPath = filepath.Join(c.path, "bin", "terraform.exe")
+		} else {
+			// *nix cli
+			tfCLIPath = filepath.Join(c.path, "bin", "terraform")
+		}
+
 		// Retrieve cookbook file list by walking
 		// the extracted cookbook's directory tree
 		c.files = []string{}
@@ -158,12 +164,11 @@ func NewCookbook(
 		if err != nil {
 			return nil, err
 		}
+		logger.TraceMessage("Initialized cookbook: %# v", c)
 
 	} else {
 		return nil, fmt.Errorf("cookbook path '%s' exists but is not a directory", c.path)
 	}
-
-	logger.TraceMessage("Initialized cookbook: %# v", c)
 	return c, nil
 }
 

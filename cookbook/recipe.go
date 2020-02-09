@@ -214,8 +214,9 @@ func (r *recipe) CreateCLI(
 		}
 	}
 
-	recipePluginLink := filepath.Join(r.tfConfigPath, contextFolder, pluginsFolder)
-	runPluginLink := filepath.Join(workingDirectory, contextFolder, pluginsFolder)
+	osArch := fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)
+	recipePluginLink := filepath.Join(r.tfConfigPath, contextFolder, pluginsFolder, osArch)
+	runPluginLink := filepath.Join(workingDirectory, contextFolder, pluginsFolder, osArch)
 	if err = r.linkRecipeAsset(recipePluginLink, runPluginLink); err != nil {
 		return nil, err
 	}
@@ -237,27 +238,52 @@ func (r *recipe) CreateCLI(
 func (r *recipe) linkRecipeAsset(recipeLink, runLink string) error {
 
 	var (
-		err error
+		err    error
+		assets []os.FileInfo
+
+		src, dest     string
+		fiSrc, fiDest os.FileInfo
 	)
 
-	if runtime.GOOS == "windows" {
-		// terraform does not follow symlinks in windows
-		os.RemoveAll(runLink)
-		if _, err = os.Stat(recipeLink); !os.IsNotExist(err) {
-			if err = copy.Copy(recipeLink, runLink); err != nil {
+	logger.TraceMessage(
+		"Linking recipe runtimg assets: %s => %s",
+		recipeLink, runLink)
+
+	if err = os.MkdirAll(runLink, os.ModePerm); err != nil {
+		return err
+	}
+	if _, err = os.Stat(recipeLink); !os.IsNotExist(err) {
+
+		if assets, err = ioutil.ReadDir(recipeLink); err != nil {
+			return err
+		}
+		for _, f := range assets {
+
+			src = filepath.Join(recipeLink, f.Name())
+			if fiSrc, err = os.Stat(src); err != nil {
 				return err
 			}
-		}
 
-	} else {
-		os.Remove(runLink)
-		if _, err = os.Stat(recipeLink); !os.IsNotExist(err) {
-			if err = os.Symlink(recipeLink, runLink); err != nil {
-				return err
+			dest = filepath.Join(runLink, f.Name())
+			if fiDest, err = os.Stat(dest); os.IsNotExist(err) ||
+				fiSrc.ModTime().After(fiDest.ModTime()) {
+
+				if runtime.GOOS == "windows" {
+					// terraform does not follow symlinks in
+					// windows so make physical copy of plugin
+					if err = copy.Copy(src, dest); err != nil {
+						return err
+					}
+
+				} else {
+					os.Remove(dest)
+					if err = os.Symlink(src, dest); err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}
-
 	return nil
 }
 

@@ -92,9 +92,9 @@ func (r *Runner) SetBackend(
 
 func (r *Runner) Init() error {
 
-	argList := []string{
-		"init",
-		fmt.Sprintf("-plugin-dir=%s", r.pluginPath),
+	argList := []string{"init"}
+	if len(r.pluginPath) > 0 {
+		argList = append(argList, fmt.Sprintf("-plugin-dir=%s", r.pluginPath))
 	}
 	argList = append(argList, r.backEnd...)
 	argList = append(argList, r.configPath)
