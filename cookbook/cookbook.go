@@ -32,8 +32,9 @@ type Cookbook struct {
 }
 
 type CookbookRecipeInfo struct {
-	Name     string
-	IaaSList []provider.CloudProvider
+	Name      string
+	IsBastion bool
+	IaaSList  []provider.CloudProvider
 }
 
 var recipePathMatcher = regexp.MustCompile(
@@ -243,17 +244,35 @@ func (c *Cookbook) IaaSList() []provider.CloudProvider {
 
 func (c *Cookbook) RecipeList() []CookbookRecipeInfo {
 
+	var (
+		name, iaas string
+
+		rr map[string]Recipe
+		r  Recipe
+
+		recipeInfo CookbookRecipeInfo
+	)
+
 	recipeInfos := make([]CookbookRecipeInfo, 0, len(c.recipes))
 	l := 0
 
-	for name, rr := range c.recipes {
-		recipeInfo := CookbookRecipeInfo{
+	for name, rr = range c.recipes {
+		recipeInfo = CookbookRecipeInfo{
 			Name:     name,
 			IaaSList: []provider.CloudProvider{},
 		}
 
+		// add iaas list and sort them
+		for iaas, r = range rr {
+			cp, _ := provider.NewCloudProvider(iaas)
+			recipeInfo.IaaSList = append(recipeInfo.IaaSList, cp)
+		}
+		provider.SortCloudProviders(recipeInfo.IaaSList)
+		recipeInfo.IsBastion = r.IsBastion()
+
 		i := sort.Search(l, func(j int) bool {
-			return recipeInfos[j].Name > name
+			return (recipeInfo.IsBastion && !recipeInfos[j].IsBastion) ||
+				recipeInfos[j].Name > recipeInfo.Name
 		})
 		recipeInfos = append(recipeInfos, recipeInfo)
 		if len(recipeInfos) > 1 {
@@ -261,12 +280,6 @@ func (c *Cookbook) RecipeList() []CookbookRecipeInfo {
 			recipeInfos[i] = recipeInfo
 		}
 		l++
-
-		for iaas := range rr {
-			cp, _ := provider.NewCloudProvider(iaas)
-			recipeInfos[i].IaaSList = append(recipeInfos[i].IaaSList, cp)
-		}
-		provider.SortCloudProviders(recipeInfos[i].IaaSList)
 	}
 	return recipeInfos
 }
