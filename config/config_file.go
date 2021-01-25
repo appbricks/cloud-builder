@@ -38,6 +38,7 @@ type configFile struct {
 	keyTimeout int64
 	passphrase string
 
+	authContext AuthContext
 	context Context
 }
 
@@ -71,6 +72,9 @@ func InitFileConfig(
 
 		path: path,
 	}
+
+	// initialize auth context
+	config.authContext = NewAuthContext()
 
 	// initialize cookbook configuration context
 	if config.context, err = NewConfigContext(cookbook); err != nil {
@@ -164,35 +168,60 @@ func (cf *configFile) Load() error {
 	var (
 		err error
 
-		decryptedContext string
-		encodedContext   []byte
-		contextReader    io.Reader
-
-		crypt *crypto.Crypt
+		crypt         *crypto.Crypt
+		contextReader io.Reader
 	)
 
-	// load config context
-	contextData := cf.Get("context")
-	if contextData != nil {
+	// if passphrase is set then create an 
+	// crypto function from it
+	if len(cf.passphrase) > 0 {
+		if crypt, err = crypto.NewCrypt(
+			crypto.KeyFromPassphrase(cf.passphrase, cf.timestamp),
+		); err != nil {
+			return err
+		}	
+	}
 
-		if len(cf.passphrase) > 0 {
-			if crypt, err = crypto.NewCrypt(
-				crypto.KeyFromPassphrase(cf.passphrase, cf.timestamp),
-			); err != nil {
-				return err
-			}
-			if decryptedContext, err = crypt.DecryptB64(contextData.(string)); err != nil {
-				return err
-			}
-			logger.TraceMessage("Loading serialized context: %s", decryptedContext)
-			contextReader = strings.NewReader(decryptedContext)
+	// get value from config file
+	var getValue = func(key string) (io.Reader, error) {
+		value := cf.Get(key)
+		if value != nil {
+			if crypt != nil {
+				var decryptedContext string
 
-		} else {
-			if encodedContext, err = base64.URLEncoding.DecodeString(contextData.(string)); err != nil {
-				return err
+				if decryptedContext, err = crypt.DecryptB64(value.(string)); err != nil {
+					return nil, err
+				}
+				logger.TraceMessage("Loading serialized value for key %s: %s", key, decryptedContext)
+				return strings.NewReader(decryptedContext), nil
+	
+			} else {
+				var encodedContext []byte
+
+				if encodedContext, err = base64.URLEncoding.DecodeString(value.(string)); err != nil {
+					return nil, err
+				}
+				return bytes.NewReader(encodedContext), nil
 			}
-			contextReader = bytes.NewReader(encodedContext)
 		}
+		return nil, nil
+	}
+
+	// load auth context
+	if contextReader, err = getValue("authContext"); err != nil {
+		return err
+	}
+	if contextReader != nil {
+		if err = cf.authContext.Load(contextReader); err != nil {
+			return err
+		}
+	}
+
+	// load config context
+	if contextReader, err = getValue("context"); err != nil {
+		return err
+	}
+	if contextReader != nil {
 		if err = cf.context.Load(contextReader); err != nil {
 			return err
 		}
@@ -207,12 +236,10 @@ func (cf *configFile) Save() error {
 	var (
 		err error
 
-		contextOutput     strings.Builder
-		marshalledContext string
-		encryptedContext  string
-		key               string
-
 		crypt *crypto.Crypt
+		key   string
+
+		contextOutput strings.Builder		
 	)
 
 	// file mod times are in seconds so retrieve
@@ -221,50 +248,74 @@ func (cf *configFile) Save() error {
 	now := time.Unix(time.Now().Local().Unix(), 0)
 	timestamp := now.UnixNano()
 
-	// save config context
-	if err = cf.context.Save(&contextOutput); err != nil {
-		return err
-	}
-	marshalledContext = contextOutput.String()
-	logger.TraceMessage("Saving serialized context: %s", marshalledContext)
-
+	// if passphrase is set then create an 
+	// crypto function from it
 	if len(cf.passphrase) > 0 {
-		// encrypt config context
 		if crypt, err = crypto.NewCrypt(
 			crypto.KeyFromPassphrase(cf.passphrase, timestamp),
 		); err != nil {
 			return err
-		}
-		if encryptedContext, err = crypt.EncryptB64(marshalledContext); err != nil {
-			return err
-		}
-		cf.Set("context", encryptedContext)
-
-		// if the key timeout is set then save the encrypted passphrase. this
-		// key will expire if the config file is not l
-		if cf.keyTimeout > 0 {
-
-			if crypt, err = crypto.NewCrypt(
-				crypto.KeyFromPassphrase(
-					cf.keyEncryptPassphrase,
-					timestamp,
-				),
-			); err != nil {
-				return err
-			}
-			if key, err = crypt.EncryptB64(cf.passphrase); err != nil {
-				return err
-			}
-			cf.Set("key", key)
-
-		} else {
-			cf.Set("key", nil)
-		}
-
-	} else {
-		cf.Set("context", base64.URLEncoding.EncodeToString([]byte(marshalledContext)))
+		}	
 	}
 
+	// set value in config file 
+	var setValue = func(key string, value string) error {
+		logger.TraceMessage("Saving serialized value of key %s: %s", key, value)
+	
+		if crypt != nil {
+			var encryptedContext string
+
+			// encrypt auth context
+			if encryptedContext, err = crypt.EncryptB64(value); err != nil {
+				return err
+			}
+			cf.Set(key, encryptedContext)
+		} else {
+			cf.Set(key, base64.URLEncoding.EncodeToString([]byte(value)))
+		}
+		return nil
+	}
+
+	// save auth context
+	if err = cf.authContext.Save(&contextOutput); err != nil {
+		return err
+	}
+	if err = setValue("authContext", contextOutput.String()); err != nil {
+		return err
+	}
+
+	// reset so output buffer can be reused
+	contextOutput.Reset()
+
+	// save config context
+	if err = cf.context.Save(&contextOutput); err != nil {
+		return err
+	}
+	if err = setValue("context", contextOutput.String()); err != nil {
+		return err
+	}
+
+	// if the key timeout is set then save the encrypted
+	// passphrase. this key will be used to retrieve the
+	// context encryption passphrase if config file is
+	// read before timeout has expired.
+	if cf.keyTimeout > 0 {
+		if crypt, err = crypto.NewCrypt(
+			crypto.KeyFromPassphrase(
+				cf.keyEncryptPassphrase,
+				timestamp,
+			),
+		); err != nil {
+			return err
+		}
+		if key, err = crypt.EncryptB64(cf.passphrase); err != nil {
+			return err
+		}
+		cf.Set("key", key)
+
+	} else {
+		cf.Set("key", nil)
+	}
 	cf.Set("keyTimeout", cf.keyTimeout)
 
 	// save config file
@@ -313,6 +364,10 @@ func (cf *configFile) SetPassphrase(passphrase string) {
 
 func (cf *configFile) SetKeyTimeout(timeout time.Duration) {
 	cf.keyTimeout = int64(timeout)
+}
+
+func (cf *configFile) AuthContext() AuthContext {
+	return cf.authContext
 }
 
 func (cf *configFile) Context() Context {

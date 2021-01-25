@@ -7,6 +7,7 @@ import (
 )
 
 type MockConfig struct {
+	authContext config.AuthContext
 	context config.Context
 }
 
@@ -46,6 +47,10 @@ func (mc *MockConfig) SetPassphrase(passphrase string) {
 }
 
 func (mc *MockConfig) SetKeyTimeout(timeout time.Duration) {
+}
+
+func (mc *MockConfig) AuthContext() config.AuthContext {
+	return mc.authContext
 }
 
 func (mc *MockConfig) Context() config.Context {

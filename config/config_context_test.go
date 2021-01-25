@@ -17,11 +17,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	cloud_test_data "github.com/mevansam/gocloud/test/data"
 	test_data "github.com/appbricks/cloud-builder/test/data"
+	cloud_test_data "github.com/mevansam/gocloud/test/data"
 )
 
-var _ = Describe("Config Tests", func() {
+var _ = Describe("Config Context", func() {
 
 	var (
 		err error

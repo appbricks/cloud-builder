@@ -4,9 +4,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/mevansam/gocloud/provider"
+	"golang.org/x/oauth2"
+
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/target"
+	"github.com/mevansam/gocloud/provider"
 )
 
 // provides an interface for managing application configuration
@@ -24,7 +26,17 @@ type Config interface {
 	SetPassphrase(passphrase string)
 
 	SetKeyTimeout(timeout time.Duration)
+	AuthContext() AuthContext
 	Context() Context
+}
+
+// provides an interface for saving and retrieving an oauth token
+type AuthContext interface {
+	Load(input io.Reader) error
+	Save(output io.Writer) error
+
+	SetToken(token *oauth2.Token)
+	GetToken() *oauth2.Token
 }
 
 // provides an interface for managing the configuration context

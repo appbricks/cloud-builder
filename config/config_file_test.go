@@ -10,11 +10,12 @@ import (
 	"github.com/gobuffalo/packr/v2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"golang.org/x/oauth2"
 
-	"github.com/mevansam/goforms/forms"
 	"github.com/appbricks/cloud-builder/config"
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/mevansam/gocloud/provider"
+	"github.com/mevansam/goforms/forms"
 
 	test_data "github.com/appbricks/cloud-builder/test/data"
 )
@@ -58,14 +59,14 @@ var _ = Describe("Config File", func() {
 			)
 
 			cfg = initConfigFile(cfgPath, cb, "")
-			updateContextWithTestData(cfg.Context())
+			updateContextWithTestData(cfg)
 
 			err = cfg.Save()
 			Expect(err).ToNot(HaveOccurred())
 
 			// Load saved configuration and validate
 			cfg = initConfigFile(cfgPath, cb, "")
-			validateContextTestData(cfg.Context())
+			validateContextTestData(cfg)
 		})
 	})
 
@@ -78,14 +79,14 @@ var _ = Describe("Config File", func() {
 			)
 
 			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase")
-			updateContextWithTestData(cfg.Context())
+			updateContextWithTestData(cfg)
 
 			err = cfg.Save()
 			Expect(err).ToNot(HaveOccurred())
 
 			// Load saved configuration and validate
 			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase")
-			validateContextTestData(cfg.Context())
+			validateContextTestData(cfg)
 		})
 
 		It("fails to read if passphrase is incorrect", func() {
@@ -95,7 +96,7 @@ var _ = Describe("Config File", func() {
 			)
 
 			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase")
-			updateContextWithTestData(cfg.Context())
+			updateContextWithTestData(cfg)
 
 			err = cfg.Save()
 			Expect(err).ToNot(HaveOccurred())
@@ -104,7 +105,8 @@ var _ = Describe("Config File", func() {
 				// getPassphrase
 				func() string {
 					return "incorrect password"
-				})
+				},
+			)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cfg).NotTo(BeNil())
@@ -125,7 +127,7 @@ var _ = Describe("Config File", func() {
 			)
 
 			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase")
-			updateContextWithTestData(cfg.Context())
+			updateContextWithTestData(cfg)
 
 			cfg.SetKeyTimeout(10 * time.Second)
 			err = cfg.Save()
@@ -137,13 +139,14 @@ var _ = Describe("Config File", func() {
 				func() string {
 					Fail("get passphrase called when it should have been retrieved from the saved key")
 					return ""
-				})
+				},
+			)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cfg).NotTo(BeNil())
 
 			err = cfg.Load()
-			validateContextTestData(cfg.Context())
+			validateContextTestData(cfg)
 
 			time.Sleep(10 * time.Second)
 			getPassphraseCalled := false
@@ -161,7 +164,7 @@ var _ = Describe("Config File", func() {
 			Expect(getPassphraseCalled).To(BeTrue())
 
 			err = cfg.Load()
-			validateContextTestData(cfg.Context())
+			validateContextTestData(cfg)
 		})
 
 	})
@@ -182,7 +185,8 @@ func initConfigFile(
 		// getPassphrase
 		func() string {
 			return passphrase
-		})
+		},
+	)
 
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
@@ -196,7 +200,7 @@ func initConfigFile(
 	return cfg
 }
 
-func updateContextWithTestData(ctx config.Context) {
+func updateContextWithTestData(cfg config.Config) {
 
 	var (
 		err error
@@ -205,6 +209,14 @@ func updateContextWithTestData(ctx config.Context) {
 		form forms.InputForm
 	)
 
+	authCtx := cfg.AuthContext()
+	authCtx.SetToken(&oauth2.Token{
+		AccessToken: "access token",
+		RefreshToken: "refresh token",
+		TokenType: "token type",
+	})
+
+	ctx := cfg.Context()
 	Expect(ctx).ToNot(BeNil())
 	cp, err = ctx.GetCloudProvider("aws")
 	Expect(err).ToNot(HaveOccurred())
@@ -217,7 +229,7 @@ func updateContextWithTestData(ctx config.Context) {
 	ctx.SaveCloudProvider(cp)
 }
 
-func validateContextTestData(ctx config.Context) {
+func validateContextTestData(cfg config.Config) {
 
 	var (
 		err error
@@ -226,6 +238,13 @@ func validateContextTestData(ctx config.Context) {
 		value *string
 	)
 
+	authCtx := cfg.AuthContext()
+	token := authCtx.GetToken()
+	Expect(token.AccessToken).To(Equal("access token"))
+	Expect(token.RefreshToken).To(Equal("refresh token"))
+	Expect(token.TokenType).To(Equal("token type"))
+
+	ctx := cfg.Context()
 	Expect(ctx).ToNot(BeNil())
 	cp, err = ctx.GetCloudProvider("aws")
 	Expect(err).NotTo(HaveOccurred())
