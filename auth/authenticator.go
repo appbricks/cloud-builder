@@ -50,7 +50,10 @@ func NewAuthenticator(
 // Starts an http listener locally to listen for
 // the oauth redirect with authcode once the 
 // user has been authenticated by the auth service.
-func (authn *Authenticator) StartOAuthFlow(ports []int) (string, error) {
+func (authn *Authenticator) StartOAuthFlow(
+	ports []int, 
+	reqHandlers ...func() (string, func(http.ResponseWriter, *http.Request)),
+) (string, error) {
 
 	var (
 		err error
@@ -86,6 +89,10 @@ func (authn *Authenticator) StartOAuthFlow(ports []int) (string, error) {
 
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/callback", authn.OAuthHandler)
+	for _, reqHandler := range reqHandlers {
+		pattern, handler := reqHandler()
+		serveMux.HandleFunc(pattern, handler)
+	}
 
 	authn.localHttpServer = &http.Server{ 
 		Addr: fmt.Sprintf(":%d", port),

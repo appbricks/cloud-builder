@@ -98,7 +98,17 @@ var _ = Describe("Authenticator", func() {
 			Expect(testAuthContext.GetToken()).To(BeNil())
 
 			// 9096 should be skipped as local server is listening on that port
-			authUrl, err := authn.StartOAuthFlow([]int{9096, 9094})
+			authUrl, err := authn.StartOAuthFlow(
+				[]int{9096, 9094},
+				// test handler
+				func() (string, func(http.ResponseWriter, *http.Request)) {
+					return "/test",
+						func(w http.ResponseWriter, r *http.Request) {
+							_, err = w.Write([]byte("test"))
+							Expect(err).ToNot(HaveOccurred())
+						}
+				},
+			)
 			Expect(err).ToNot(HaveOccurred())
 			u, err := url.Parse(authUrl)
 			Expect(err).ToNot(HaveOccurred())
@@ -124,6 +134,14 @@ var _ = Describe("Authenticator", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(conn).ToNot(BeNil())
 			defer conn.Close()
+
+			// check if callback server can serve a test response
+			resp, err := http.Get("http://localhost:9094/test")
+			Expect(err).ToNot(HaveOccurred())
+			body, err := ioutil.ReadAll(resp.Body)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.Status).To(Equal("200 OK"))
+			Expect(string(body)).To(Equal("test"))
 
 			// simulate browser login via given auth URL
 			go func() {
@@ -283,4 +301,8 @@ func (ac *TestAuthContext) SetToken(token *oauth2.Token) {
 
 func (ac *TestAuthContext) GetToken() *oauth2.Token {
 	return ac.token
+}
+
+func (ac *TestAuthContext) Reset() {
+	ac.token = nil
 }
