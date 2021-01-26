@@ -37,6 +37,7 @@ type AuthContext interface {
 
 	SetToken(token *oauth2.Token)
 	GetToken() *oauth2.Token
+	Reset()
 }
 
 // provides an interface for managing the configuration context

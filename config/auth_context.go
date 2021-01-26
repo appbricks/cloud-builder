@@ -33,3 +33,7 @@ func (ac *authContext) SetToken(token *oauth2.Token) {
 func (ac *authContext) GetToken() *oauth2.Token {
 	return ac.token
 }
+
+func (ac *authContext) Reset() {
+	ac.token = &oauth2.Token{}
+}
