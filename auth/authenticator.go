@@ -3,7 +3,10 @@ package auth
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,7 +50,33 @@ func NewAuthenticator(
 // Starts an http listener locally to listen for
 // the oauth redirect with authcode once the 
 // user has been authenticated by the auth service.
-func (authn *Authenticator) StartOAuthFlow(port int) (string, error) {
+func (authn *Authenticator) StartOAuthFlow(ports []int) (string, error) {
+
+	var (
+		err error
+
+		port int		
+	)
+
+	var checkPort = func(port int) error {
+		// check if there is a listener on the callback port
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort("localhost", strconv.Itoa(port)), time.Second)
+		defer func() {
+			if conn != nil {
+				conn.Close()
+			}
+		}()
+		return err
+	}
+
+	for _, port = range ports {
+		if err = checkPort(port); err != nil {
+			break
+		}
+	}
+	if err == nil {
+		return "", fmt.Errorf("unable to create callback server. all provided ports are in use.")
+	}
 
 	// construct callback URL for auth code exchange
 	authn.config.RedirectURL = fmt.Sprintf(
@@ -75,7 +104,7 @@ func (authn *Authenticator) StartOAuthFlow(port int) (string, error) {
 		}()
 
 		// always returns error. ErrServerClosed on graceful close
-		if err := authn.localHttpServer.ListenAndServe(); err != http.ErrServerClosed {
+		if err = authn.localHttpServer.ListenAndServe(); err != http.ErrServerClosed {
 			authn.serverError = err
 			
 			logger.DebugMessage(
@@ -197,6 +226,12 @@ func (authn *Authenticator) IsAuthenticated() (bool, error) {
 	}
 	token.Expiry = time.Now()
 	if token, err = authn.config.TokenSource(context.Background(), token).Token(); err != nil {
+		errorMsg := err.Error()
+		logger.DebugMessage("Token source refresh error: %s", errorMsg)
+		
+		if strings.ContainsAny(errorMsg, "token expired") {
+			return false, fmt.Errorf("not authenticated")
+		}
 		return false, err
 	}
 	authn.context.SetToken(token)

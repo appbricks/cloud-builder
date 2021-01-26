@@ -97,7 +97,8 @@ var _ = Describe("Authenticator", func() {
 			defer authSync.Done()
 			Expect(testAuthContext.GetToken()).To(BeNil())
 
-			authUrl, err := authn.StartOAuthFlow(9094)
+			// 9096 should be skipped as local server is listening on that port
+			authUrl, err := authn.StartOAuthFlow([]int{9096, 9094})
 			Expect(err).ToNot(HaveOccurred())
 			u, err := url.Parse(authUrl)
 			Expect(err).ToNot(HaveOccurred())
@@ -113,8 +114,7 @@ var _ = Describe("Authenticator", func() {
 			Expect(matched).To(BeTrue())
 
 			redirectUri := q.Get("redirect_uri")
-			matched, _ = regexp.MatchString("http://localhost:[1-9][0-9]*/callback", redirectUri)
-			Expect(matched).To(BeTrue())
+			Expect(redirectUri).To(Equal("http://localhost:9094/callback"))
 
 			u, err = url.Parse(redirectUri)
 			Expect(err).ToNot(HaveOccurred())
