@@ -189,6 +189,10 @@ func (authn *Authenticator) OAuthHandler(w http.ResponseWriter, r *http.Request)
 	
 	if authn.localHttpServer != nil {	
 		go func() {	
+			// add a delay so any callback content 
+			// for response page can be served
+			time.Sleep(time.Second)
+
 			if err = authn.localHttpServer.Shutdown(context.Background()); err != nil {
 				authn.serverError = err
 					
