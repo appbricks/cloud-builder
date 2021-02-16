@@ -116,8 +116,7 @@ func buildCookbookFixture(destPath, repo, name, iaas string, clean bool) error {
 		name, iaas, repo)
 
 	cmd.Dir = os.TempDir()
-	cmd.Env = append(os.Environ(),
-		"HOME_DIR="+destPath)
+	cmd.Env = append(os.Environ(), "HOME_DIR="+destPath)
 
 	err = cmd.Run()
 	if err != nil {

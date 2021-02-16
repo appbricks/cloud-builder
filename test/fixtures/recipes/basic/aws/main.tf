@@ -25,7 +25,7 @@
 # @order: 1
 #
 variable "test_input_1" {
-  type        = "string"
+  type        = string
   description = "Description for Test Input #1"
 }
 
@@ -38,7 +38,7 @@ variable "test_input_1" {
 # @order: 3
 #
 variable "test_input_2" {
-  type        = "string"
+  type        = string
   description = "Description for Test Input #2"
 }
 
@@ -47,7 +47,7 @@ variable "test_input_2" {
 # @order: 2
 #
 variable "test_input_3" {
-  type        = "string"
+  type        = string
   default     = "abcd3"
   description = "Description for Test Input #3"
 }
@@ -57,7 +57,7 @@ variable "test_input_3" {
 # @order: 0
 #
 variable "test_input_5" {
-  type        = "string"
+  type        = string
   description = "Description for Test Input #5"
 }
 
@@ -67,9 +67,18 @@ variable "test_input_5" {
 # @order: 4
 #
 variable "test_input_7" {
-  type        = "string"
+  type        = string
   default     = "us-east-1"
   description = "Description for Test Input #7"
+}
+
+module "label" {
+  source     = "git::https://github.com/cloudposse/terraform-null-label.git?ref=master"
+
+  namespace   = "abc"
+  stage       = "xyz"
+  name        = "cloudbuilder"
+  delimiter   = "-"
 }
 
 resource "local_file" "basic-test" {
