@@ -23,8 +23,8 @@ import (
 )
 
 const (
+	lockFileName  = ".terraform.lock.hcl"
 	contextFolder = ".terraform"
-	pluginsFolder = "plugins"
 	modulesFolder = "modules"
 )
 
@@ -193,7 +193,7 @@ func (r *recipe) CreateCLI(
 		return nil, err
 	}
 
-	// create a backend template file with backen type declaration as
+	// create a backend template file with backend type declaration as
 	// there seems to be a bug in terraform where 'output' and 'taint'
 	// commands are unable to load the backend state when the working
 	// directory does not have the backend resource declared even if
@@ -214,16 +214,15 @@ func (r *recipe) CreateCLI(
 		}
 	}
 
-	osArch := fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)
-	recipePluginLink := filepath.Join(r.tfConfigPath, contextFolder, pluginsFolder, osArch)
-	runPluginLink := filepath.Join(workingDirectory, contextFolder, pluginsFolder, osArch)
-	if err = r.linkRecipeAsset(recipePluginLink, runPluginLink); err != nil {
+	recipeLockPath := filepath.Join(r.tfConfigPath, lockFileName)
+	runLockLink := filepath.Join(workingDirectory, lockFileName)
+	if err = r.linkRecipeAsset(recipeLockPath, runLockLink); err != nil {
 		return nil, err
 	}
 
-	recipeModuleLink := filepath.Join(r.tfConfigPath, contextFolder, modulesFolder)
+	recipeModulePath := filepath.Join(r.tfConfigPath, contextFolder, modulesFolder)
 	runModuleLink := filepath.Join(workingDirectory, contextFolder, modulesFolder)
-	if err = r.linkRecipeAsset(recipeModuleLink, runModuleLink); err != nil {
+	if err = r.linkRecipeAsset(recipeModulePath, runModuleLink); err != nil {
 		return nil, err
 	}
 
@@ -235,7 +234,7 @@ func (r *recipe) CreateCLI(
 	)
 }
 
-func (r *recipe) linkRecipeAsset(recipeLink, runLink string) error {
+func (r *recipe) linkRecipeAsset(recipePath, runLink string) error {
 
 	var (
 		err    error
@@ -246,40 +245,69 @@ func (r *recipe) linkRecipeAsset(recipeLink, runLink string) error {
 	)
 
 	logger.TraceMessage(
-		"Linking recipe runtimg assets: %s => %s",
-		recipeLink, runLink)
+		"Linking recipe runtime assets: %s => %s",
+		recipePath, runLink)
 
-	if err = os.MkdirAll(runLink, os.ModePerm); err != nil {
-		return err
-	}
-	if _, err = os.Stat(recipeLink); !os.IsNotExist(err) {
+	link := func(linkSrc, linkDest string) error {
 
-		if assets, err = ioutil.ReadDir(recipeLink); err != nil {
-			return err
-		}
-		for _, f := range assets {
-
-			src = filepath.Join(recipeLink, f.Name())
-			if fiSrc, err = os.Stat(src); err != nil {
+		if runtime.GOOS == "windows" {
+			// terraform does not follow symlinks in
+			// windows so make physical copy of provider					
+			if err = copy.Copy(
+				linkSrc, 
+				linkDest, 
+				copy.Options{
+					OnSymlink: func(src string) copy.SymlinkAction {
+						return copy.Deep
+					},
+				},
+			); err != nil {
 				return err
 			}
 
-			dest = filepath.Join(runLink, f.Name())
-			if fiDest, err = os.Stat(dest); os.IsNotExist(err) ||
+		} else {
+			os.Remove(linkDest)
+			if err = os.Symlink(linkSrc, linkDest); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if fiSrc, err = os.Stat(recipePath); !os.IsNotExist(err) {
+		if fiSrc.Mode().IsDir() {
+
+			if err = os.MkdirAll(runLink, os.ModePerm); err != nil {
+				return err
+			}
+			if assets, err = ioutil.ReadDir(recipePath); err != nil {
+				return err
+			}
+			// link all assets in given path to run link path
+			for _, f := range assets {
+	
+				src = filepath.Join(recipePath, f.Name())
+				if fiSrc, err = os.Stat(src); err != nil {
+					return err
+				}
+	
+				dest = filepath.Join(runLink, f.Name())
+				if fiDest, err = os.Stat(dest); os.IsNotExist(err) ||
+					fiSrc.ModTime().After(fiDest.ModTime()) {
+					
+					if err = link(src, dest); err != nil {
+						return err
+					}
+				}
+			}
+
+		} else {
+			if fiDest, err = os.Stat(runLink); os.IsNotExist(err) ||
 				fiSrc.ModTime().After(fiDest.ModTime()) {
-
-				if runtime.GOOS == "windows" {
-					// terraform does not follow symlinks in
-					// windows so make physical copy of plugin
-					if err = copy.Copy(src, dest); err != nil {
-						return err
-					}
-
-				} else {
-					os.Remove(dest)
-					if err = os.Symlink(src, dest); err != nil {
-						return err
-					}
+				
+				// make a direct link
+				if err = link(recipePath, runLink); err != nil {
+					return err
 				}
 			}
 		}
@@ -394,7 +422,12 @@ func (r *recipe) InputForm() (forms.InputForm, error) {
 	form := forms_config.RecipeConfigForms.Group(r.name)
 	for k, v := range r.variables {
 		if field, err = form.GetInputField(k); err != nil {
-			return nil, err
+			logger.DebugMessage(
+				"Persisted recipe variable not found in loaded recipe. It will be removed from saved config: %s",
+				 err.Error())
+
+			delete(r.variables, k)
+			continue
 		}
 		if err = field.SetValueRef(&v.Value); err != nil {
 			return nil, err

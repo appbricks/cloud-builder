@@ -6,17 +6,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mevansam/gocloud/provider"
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/target"
+	"github.com/mevansam/gocloud/provider"
 
 	"github.com/mevansam/goforms/forms"
 	"github.com/mevansam/goutils/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	cloud_test_data "github.com/mevansam/gocloud/test/data"
 	test_data "github.com/appbricks/cloud-builder/test/data"
+	cloud_test_data "github.com/mevansam/gocloud/test/data"
 
 	target_mocks "github.com/appbricks/cloud-builder/test/mocks"
 )
@@ -73,6 +73,10 @@ var _ = Describe("TargetSet", func() {
 			Expect(tgt1.RecipeIaas).To(Equal("aws"))
 			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider.(provider.CloudProvider))
 
+			tgtDeps := tgt1.Dependencies()
+			Expect(len(tgtDeps)).To(Equal(1))
+			Expect(tgtDeps[0].Key()).To(Equal("basic/aws/cc/appbrickscookbook"))
+
 			test_data.ValidatePersistedVariables(
 				tgt1.Recipe.(cookbook.Recipe).GetVariables(),
 				test_data.AWSBasicRecipeVariables1AsMap,
@@ -119,7 +123,9 @@ var _ = Describe("TargetSet", func() {
 			err = inputForm.SetFieldValue("test_input_4", "test_input_4 updated")
 			Expect(err).NotTo(HaveOccurred())
 
-			ts.SaveTarget("basic/aws/aa/", tgt)
+			tgt.DependentTargets = []string{}
+			err = ts.SaveTarget("basic/aws/aa/", tgt)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(ts.GetTarget("basic/aws/aa/")).To(BeNil())
 			Expect(ts.GetTarget("basic/aws/aa/cookbook")).ToNot(BeNil())
 
@@ -133,7 +139,9 @@ var _ = Describe("TargetSet", func() {
 			err = inputForm.SetFieldValue("test_input_6", "test_input_6 updated")
 			Expect(err).NotTo(HaveOccurred())
 
-			ts.SaveTarget("basic/aws/cc/appbrickscookbook", tgt)
+			tgt.DependentTargets = []string{"basic/aws/aa/cookbook"}
+			err = ts.SaveTarget("basic/aws/cc/appbrickscookbook", tgt)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(ts.GetTarget("basic/aws/cc/appbrickscookbook")).To(BeNil())
 			Expect(ts.GetTarget("basic/aws/bb/appbrickscookbook")).ToNot(BeNil())
 
@@ -151,9 +159,10 @@ var _ = Describe("TargetSet", func() {
 			Expect(len(actual)).To(Equal(2))
 
 			for _, v := range actual {
-
 				actualTargetConfig, ok = v.(map[string]interface{})
 				Expect(ok).To(BeTrue())
+
+				deps := actualTargetConfig["dependentTargets"].([]interface{})
 
 				key := ""
 				vv := actualTargetConfig["recipe"].(map[string]interface{})["variables"].([]interface{})
@@ -170,6 +179,7 @@ var _ = Describe("TargetSet", func() {
 				case "aa":
 					Expect(actualTargetConfig["recipeName"]).To(Equal("basic"))
 					Expect(actualTargetConfig["recipeIaas"]).To(Equal("aws"))
+					Expect(len(deps)).To(Equal(0))
 					expectedVariableMap = utils.Copy(test_data.AWSBasicRecipeVariables1AsMap).(map[string]interface{})
 
 					expectedVariableMap["test_input_2"] = map[string]interface{}{
@@ -184,6 +194,8 @@ var _ = Describe("TargetSet", func() {
 				case "bb":
 					Expect(actualTargetConfig["recipeName"]).To(Equal("basic"))
 					Expect(actualTargetConfig["recipeIaas"]).To(Equal("aws"))
+					Expect(len(deps)).To(Equal(1))
+					Expect(deps[0]).To(Equal("basic/aws/aa/cookbook"))
 					expectedVariableMap = utils.Copy(test_data.AWSBasicRecipeVariables2AsMap).(map[string]interface{})
 
 					expectedVariableMap["test_input_1"] = map[string]interface{}{
@@ -225,6 +237,7 @@ const targetConfigDocument = `
 	{
 		"recipeName": "basic",
 		"recipeIaas": "aws",
+		"dependentTargets": [ "basic/aws/cc/appbrickscookbook" ],
 		"recipe": {
 			"variables": ` + test_data.AWSBasicRecipeVariables1 + `
 		},
@@ -234,6 +247,7 @@ const targetConfigDocument = `
 	{
 		"recipeName": "basic",
 		"recipeIaas": "aws",
+		"dependentTargets": [],
 		"recipe": {
 			"variables": ` + test_data.AWSBasicRecipeVariables2 + `
 		},

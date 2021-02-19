@@ -3,6 +3,7 @@ package target
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -23,6 +24,7 @@ type TargetSet struct {
 type parsedTarget struct {
 	RecipeName string `json:"recipeName"`
 	RecipeIaas string `json:"recipeIaas"`
+	DependentTargets []string `json:"dependentTargets"`
 
 	Recipe   json.RawMessage `json:"recipe"`
 	Provider json.RawMessage `json:"provider"`
@@ -108,14 +110,30 @@ func (ts *TargetSet) GetTarget(name string) *Target {
 	return ts.targets[name]
 }
 
-func (ts *TargetSet) SaveTarget(key string, target *Target) {
+func (ts *TargetSet) SaveTarget(key string, target *Target) error {
 	logger.TraceMessage("Saving target: %# v", target)
+
+	target.dependencies = []*Target{}
+	if len(target.DependentTargets) > 0 {
+		for _, dependentTarget := range target.DependentTargets {
+			t := ts.targets[dependentTarget]
+			if t == nil {
+				return fmt.Errorf(
+					"Dependent target '%s' of target '%s' was not found", 
+					dependentTarget, key,
+				)
+			}
+			target.dependencies = append(target.dependencies, t)
+		}
+	}
 
 	// delete target with given key before
 	// saving in the target map, as the key of
 	// the new/updated target may have changed
 	delete(ts.targets, key)
 	ts.targets[target.Key()] = target
+
+	return nil
 }
 
 func (ts *TargetSet) DeleteTarget(key string) {
@@ -140,6 +158,8 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	targetsWithDependencies := []*Target{}
+
 	for decoder.More() {
 
 		parsedTarget := parsedTarget{}
@@ -162,9 +182,29 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		if err = json.Unmarshal(parsedTarget.Backend, target.Backend); err != nil {
 			return err
 		}
+		target.DependentTargets = parsedTarget.DependentTargets
 		target.Output = parsedTarget.Output
 		target.CookbookTimestamp = parsedTarget.CookbookTimestamp
 
+		if len(target.DependentTargets) > 0 {
+			targetsWithDependencies = append(targetsWithDependencies, target)
+		} else {
+			ts.targets[target.Key()] = target
+		}
+	}
+
+	for _, target := range targetsWithDependencies {
+		for _, dependentTarget := range target.DependentTargets {
+			t := ts.targets[dependentTarget]
+			if t == nil {
+				logger.DebugMessage(
+					"Dependent target '%s' of target '%s' was not found. Target will be deleted.", 
+					dependentTarget, target.Key())
+
+				delete(ts.targets, target.Key())
+			}
+			target.dependencies = append(target.dependencies, t)
+		}
 		ts.targets[target.Key()] = target
 	}
 

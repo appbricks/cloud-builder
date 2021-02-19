@@ -3,16 +3,16 @@ package target_test
 import (
 	"strings"
 
-	"github.com/mevansam/goforms/forms"
 	"github.com/appbricks/cloud-builder/target"
+	"github.com/mevansam/goforms/forms"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	cookbook_mocks "github.com/appbricks/cloud-builder/test/mocks"
 	backend_mocks "github.com/mevansam/gocloud/test/mocks"
 	provider_mocks "github.com/mevansam/gocloud/test/mocks"
 	utils_mocks "github.com/mevansam/goutils/test/mocks"
-	cookbook_mocks "github.com/appbricks/cloud-builder/test/mocks"
 )
 
 var _ = Describe("Builder", func() {
@@ -117,15 +117,25 @@ var _ = Describe("Builder", func() {
 					"default arg value 3",
 					[]string{},
 				)
+				recipe.AddInputField(
+					"test_input_4",
+					"display name for test input 4",
+					"description name for test input 4",
+					"default arg value 4",
+					[]string{},
+				)
 				inputForm, _ = recipe.InputForm()
 				_ = inputForm.SetFieldValue("test_input_1", "arg value 1")
-				_ = inputForm.SetFieldValue("test_input_3", "arg value 3")
+				_ = inputForm.SetFieldValue("test_input_4", "arg value 4")
 
 				builder, err = target.NewBuilder(
 					"test/key",
 					recipe,
 					provider,
 					backend,
+					map[string]string{
+						"test_input_3": "arg value 3",
+					},
 					// cli buffers already set so ignored
 					nil, nil,
 				)
@@ -162,9 +172,11 @@ var _ = Describe("Builder", func() {
 					[]string{
 						"plan",
 						"-input=false",
+						"-out=tf.plan",
 						"-var", "test_input_1=arg value 1",
 						"-var", "test_input_2=arg value 2",
 						"-var", "test_input_3=arg value 3",
+						"-var", "test_input_4=arg value 4",
 						testRecipePath,
 					},
 					[]string{
@@ -231,13 +243,28 @@ var _ = Describe("Builder", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
-						"apply",
-						"-auto-approve",
+						"plan",
 						"-input=false",
+						"-out=tf.plan",
 						"-var", "test_input_1=arg value 1",
 						"-var", "test_input_2=arg value 2",
 						"-var", "test_input_3=arg value 3",
+						"-var", "test_input_4=arg value 4",
 						testRecipePath,
+					},
+					[]string{
+						"envvar1=provider value 1",
+						"envvar2=provider value 2",
+					},
+					"Plan: 1 to add, 0 to change, 0 to destroy.",
+					"",
+					nil,
+				))
+
+				cli.ExpectFakeRequest(cli.AddFakeResponse(
+					[]string{
+						"apply",
+						"tf.plan",
 					},
 					[]string{
 						"envvar1=provider value 1",

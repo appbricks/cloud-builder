@@ -140,43 +140,43 @@ var _ = Describe("Recipe", func() {
 				abcd7 := "us-east-1"
 
 				variables := map[string]expectedValues{
-					"test_input_1": expectedValues{
+					"test_input_1": {
 						optional:     false,
 						displayName:  "Test Input #1",
 						description:  "Description for Test Input #1",
 						defaultValue: nil,
 					},
-					"test_input_2": expectedValues{
+					"test_input_2": {
 						optional:     false,
 						displayName:  "Test Input #2",
 						description:  "Description for Test Input #2",
 						defaultValue: nil,
 					},
-					"test_input_3": expectedValues{
+					"test_input_3": {
 						optional:     true,
 						displayName:  "Test Input #3",
 						description:  "Description for Test Input #3",
 						defaultValue: &abcd3,
 					},
-					"test_input_4": expectedValues{
+					"test_input_4": {
 						optional:     true,
 						displayName:  "test_input_4",
 						description:  "Description for Test Input #4",
 						defaultValue: &abcd4,
 					},
-					"test_input_5": expectedValues{
+					"test_input_5": {
 						optional:     false,
 						displayName:  "Test Input #5",
 						description:  "Description for Test Input #5",
 						defaultValue: nil,
 					},
-					"test_input_6": expectedValues{
+					"test_input_6": {
 						optional:     true,
 						displayName:  "test_input_6",
 						description:  "Description for Test Input #6",
 						defaultValue: &abcd6,
 					},
-					"test_input_7": expectedValues{
+					"test_input_7": {
 						optional:     true,
 						displayName:  "Test Input #7",
 						description:  "Description for Test Input #7",
@@ -280,7 +280,8 @@ var _ = Describe("Recipe", func() {
 
 					// close piped output
 					os.Stdout.Close()
-					io.Copy(&output, stdOutReader)
+					_, err = io.Copy(&output, stdOutReader)
+					Expect(err).NotTo(HaveOccurred())
 
 					// signal end
 					out <- output.String()
@@ -375,7 +376,8 @@ var _ = Describe("Recipe", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(*value).To(Equal("us-east-1"))
 
-				form.SetFieldValue("test_input_2", "cookbook")
+				err = form.SetFieldValue("test_input_2", "cookbook")
+				Expect(err).NotTo(HaveOccurred())
 				Expect(r.IsValid()).To(BeTrue())
 
 				value, err = r.GetValue("test_input_2")

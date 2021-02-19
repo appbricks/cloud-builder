@@ -51,8 +51,8 @@ func (f *FakeRecipe) ConfigPath() string {
 	return f.recipePath
 }
 
-func (f *FakeRecipe) PluginPath() string {
-	return "/fake/pluginpath"
+func (f *FakeRecipe) ProviderPath() string {
+	return "/fake/providerpath"
 }
 
 func (f *FakeRecipe) GetKeyFieldValues() []string {

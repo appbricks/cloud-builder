@@ -21,6 +21,8 @@ type Builder struct {
 	provider provider.CloudProvider
 	backend  backend.CloudBackend
 
+	additonalInputs map[string]string
+
 	cli          run.CLI
 	configInputs map[string]terraform.Input
 
@@ -37,6 +39,7 @@ func NewBuilder(
 	cookbookRecipe,
 	cloudProvider,
 	cloudBackend config.Configurable,
+	additonalInputs map[string]string,
 	outputBuffer,
 	errorBuffer io.Writer,
 ) (*Builder, error) {
@@ -60,6 +63,8 @@ func NewBuilder(
 		recipe:   recipe,
 		provider: cloudProvider.(provider.CloudProvider),
 		backend:  cloudBackend.(backend.CloudBackend),
+
+		additonalInputs: additonalInputs,
 
 		cli:          cli,
 		configInputs: make(map[string]terraform.Input),
@@ -110,6 +115,10 @@ func (b *Builder) setEnvVars(runner *terraform.Runner) error {
 			}
 		}
 	}
+	// add additional inputs as TF_VAR_* environment variables
+	for n, v := range b.additonalInputs {
+		vars["TF_VAR_"+n] = v
+	}
 	runner.SetEnv(vars)
 
 	return nil
@@ -134,12 +143,25 @@ func (b *Builder) getTemplateVars() (map[string]string, error) {
 	}
 	vars = make(map[string]string)
 	for _, inputField = range inputForm.InputFields() {
+		if inputField.InputSet() {
+			if value = inputField.Value(); value == nil {
+				return nil, fmt.Errorf(
+					"recipe '%s' input field '%s' was nil",
+					b.recipe.Name(),
+					inputField.Name())
+			}
+			
+		} else {
+			if _, exists := b.additonalInputs[inputField.Name()]; exists {
+				// var has already been added as an additional input
+				continue
 
-		if value = inputField.Value(); value == nil {
-			return nil, fmt.Errorf(
-				"recipe '%s' input field '%s' was nil",
-				b.recipe.Name(),
-				inputField.Name())
+			} else if value = inputField.Value(); value == nil {
+				return nil, fmt.Errorf(
+					"recipe '%s' input field '%s' was not set and does not have a default value",
+					b.recipe.Name(),
+					inputField.Name())
+			}	
 		}
 		vars[inputField.Name()] = *value
 	}

@@ -19,7 +19,7 @@ usage () {
   echo -e "    -b|--git-branch  <GIT_BRANCH_NAME>   The branch or tag of the git repository. Default is \"master\"."
   echo -e "    -n|--name        <RECIPE NAME>       The name of the recipe"
   echo -e "    -i|--iaas        <TARGET IAAS>       The target IaaS of this recipe."
-  echo -e "    -o|--os-name     <TARGET OS>         The target OS for which recipe plugins should be download."
+  echo -e "    -o|--os-name     <TARGET OS>         The target OS for which recipe providers should be download."
   echo -e "                                         Should be of \"darwin\", \"linux\" or \"windows\"."
   echo -e "    -s|--single                          Only the recipe indicated shoud be added"
   echo -e "    -c|--clean                           Clean build before proceeding"
@@ -101,13 +101,13 @@ bin_dir=${build_dir}/bin
 dist_dir=${build_dir}/dist/${target_os}_${target_arch}
 dest_dist_dir=${HOME_DIR:-$home_dir}/dist
 cookbook_bin_dir=${dist_dir}/bin
-cookbook_plugins_dir=${dist_dir}/bin/plugins/${target_os}_${target_arch}
+cookbook_plugins_dir=${dist_dir}/bin/plugins
 cookbook_dist_zip=${build_dir}/dist/cookbook-${target_os}_${target_arch}.zip
 
 [[ -z $clean ]] || \
   (rm -fr $dist_dir && rm -fr $dest_dist_dir && rm -f $cookbook_dist_zip)
 
-terraform_version=${TERRAFORM_VERSION:-0.12.20}
+terraform_version=${TERRAFORM_VERSION:-0.14.6}
 
 mkdir -p $bin_dir
 terraform=${bin_dir}/terraform
@@ -199,15 +199,21 @@ if [[ -n $recipe_git_project_url ]]; then
       cd
 
       # initialize terraform templates in order to
-      # download the dependent plugins and modules
+      # download the dependent providers and modules
       pushd $recipe_folder
       $terraform init -backend=false
       popd
 
-      # consolidate download terraform plugins in
-      # plugins folder
-      pushd $cookbook_plugins_dir
-      for f in $(ls ${recipe_folder}/.terraform/plugins/${current_os}_${target_arch}/terraform-provider-*); do
+      # consolidate terraform providers to
+      # the distribution's provider folder
+      # downloading os specific binaries
+      # if os is different to build os
+      for f in $(find ${recipe_folder}/.terraform/providers -name 'terraform-provider-*' -print); do
+        abs_dir_path=$(dirname $(dirname $f))
+        provider_path=${abs_dir_path#${recipe_folder}/.terraform/providers/*}
+        provider_dist_path=${cookbook_plugins_dir}/${provider_path}/${target_os}_${target_arch}
+        mkdir -p $provider_dist_path
+        
         name=$(basename $f)
         name_x=x${name#*_x*}
         name=${name%*_x*}
@@ -216,31 +222,32 @@ if [[ -n $recipe_git_project_url ]]; then
         version=${version#v*}
 
         if [[ $target_os == windows ]]; then
-          plugin_file_name=${provider_name}_v${version}_${name_x}.exe
+          provider_file_name=${provider_name}_v${version}_${name_x}.exe
         else
-          plugin_file_name=${provider_name}_v${version}_${name_x}
+          provider_file_name=${provider_name}_v${version}_${name_x}
         fi
-        if [[ ! -e ${cookbook_plugins_dir}/${plugin_file_name} ]]; then
+        if [[ ! -e ${provider_dist_path}/${provider_file_name} ]]; then
 
           if [[ $target_os == $current_os ]]; then
-            cp $f $cookbook_plugins_dir
+            cp $f ${provider_dist_path}
           else
+            pushd ${provider_dist_path}
             curl \
               -L https://releases.hashicorp.com/${provider_name}/${version}/${provider_name}_${version}_${target_os}_${target_arch}.zip \
               -o terraform-provider.zip
 
             unzip -o terraform-provider.zip
             rm terraform-provider.zip
+            popd
           fi
         fi
       done
-      popd
 
       rm -fr ${cookbook_recipes_dir}/${recipe}/${iaas}
       mkdir -p ${cookbook_recipes_dir}/${recipe}/${iaas}
       cp -RLp $recipe_folder ${cookbook_recipes_dir}/${recipe}
       rm -f ${cookbook_recipes_dir}/${recipe}/${iaas}/.terraform/terraform.tfstate
-      rm -fr ${cookbook_recipes_dir}/${recipe}/${iaas}/.terraform/plugins
+      rm -fr ${cookbook_recipes_dir}/${recipe}/${iaas}/.terraform/providers
     done
   done
 fi

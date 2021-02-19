@@ -128,10 +128,7 @@ func NewCookbook(
 	if info.IsDir() {
 
 		// embedded cookbook plugin path
-		tfPluginPath = filepath.Join(
-			c.path, "bin", "plugins",
-			fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH),
-		)
+		tfPluginPath = filepath.Join(c.path, "bin", "plugins")
 		if runtime.GOOS == "windows" {
 			// windows cli
 			tfCLIPath = filepath.Join(c.path, "bin", "terraform.exe")

@@ -27,7 +27,7 @@ require (
 	github.com/mevansam/goutils v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo v1.13.0
 	github.com/onsi/gomega v1.10.1
-	github.com/otiai10/copy v1.0.2
+	github.com/otiai10/copy v1.4.2
 	github.com/spf13/viper v1.6.1
 	github.com/zclconf/go-cty v1.1.1
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect

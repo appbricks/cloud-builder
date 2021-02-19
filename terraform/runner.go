@@ -118,7 +118,7 @@ func (r *Runner) Plan(
 			"-input=false",
 			fmt.Sprintf(
 				"-out=%s",
-				filepath.Join(r.cli.WorkingDirectory(), tfPlanFileName),
+				tfPlanFileName,
 			),
 		},
 		r.configPath,

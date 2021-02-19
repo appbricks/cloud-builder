@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Runner", func() {
+var _ = Describe("Config Test", func() {
 
 	var (
 		err error

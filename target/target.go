@@ -1,10 +1,12 @@
 package target
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/appbricks/cloud-builder/cookbook"
@@ -36,10 +38,13 @@ const (
 type Target struct {
 	RecipeName string `json:"recipeName"`
 	RecipeIaas string `json:"recipeIaas"`
+	DependentTargets []string `json:"dependentTargets"`
 
 	Recipe   cookbook.Recipe        `json:"recipe,omitempty"`
 	Provider provider.CloudProvider `json:"provider,omitempty"`
 	Backend  backend.CloudBackend   `json:"backend,omitempty"`
+
+	dependencies []*Target
 
 	Output *map[string]terraform.Output `json:"output,omitempty"`
 
@@ -65,6 +70,7 @@ type ManagedInstance struct {
 	description,
 	fqdn,
 	publicIP,
+	privateIP,
 	sshPort,
 	sshUser,
 	sshKey,
@@ -78,10 +84,13 @@ func NewTarget(
 	return &Target{
 		RecipeName: strings.Split(r.Name(), "/")[0],
 		RecipeIaas: p.Name(),
+		DependentTargets: []string{},
 
 		Recipe:   r.(cookbook.Recipe),
 		Provider: p.(provider.CloudProvider),
 		Backend:  b.(backend.CloudBackend),
+
+		dependencies: []*Target{},
 	}
 }
 
@@ -136,7 +145,7 @@ func (t *Target) LoadRemoteRefs() error {
 				return fmt.Errorf("node description key value is not a string")
 			}
 		}
-		if output, ok = (*t.Output)["cb_bastion_version"]; ok {
+		if output, ok = (*t.Output)["cb_node_version"]; ok {
 			if t.version, ok = output.Value.(string); !ok {
 				return fmt.Errorf("node version key value is not a string")
 			}
@@ -177,7 +186,13 @@ func (t *Target) LoadRemoteRefs() error {
 				if instance.description, err = readKeyValue("description"); err != nil {
 					return err
 				}
+				if instance.fqdn, err = readKeyValue("fqdn"); err != nil {
+					return err
+				}
 				if instance.publicIP, err = readKeyValue("public_ip"); err != nil {
+					return err
+				}
+				if instance.privateIP, err = readKeyValue("private_ip"); err != nil {
 					return err
 				}
 				if instance.sshPort, err = readKeyValue("ssh_port"); err != nil {
@@ -235,15 +250,28 @@ func (t *Target) LoadRemoteRefs() error {
 // returns a unique identifier for
 // the target
 func (t *Target) Key() string {
+	
+	keyValues := t.Recipe.GetKeyFieldValues()
+	for _, dt := range t.dependencies {
+		keyValues = append(keyValues, "<"+dt.Key())
+	}
+	return CreateKey(t.RecipeName, t.RecipeIaas, keyValues...)
+}
 
+// create a target key
+func CreateKey(
+	recipeName, iaasName string, 
+	keyValues ...string,
+) string {
+	
 	var (
 		key strings.Builder
 	)
-	key.WriteString(t.RecipeName)
+	key.WriteString(recipeName)
 	key.Write([]byte{'/'})
-	key.WriteString(t.RecipeIaas)
+	key.WriteString(iaasName)
 	key.Write([]byte{'/'})
-	key.WriteString(strings.Join(t.Recipe.GetKeyFieldValues(), "/"))
+	key.WriteString(strings.Join(keyValues, "/"))
 	return key.String()
 }
 
@@ -271,6 +299,10 @@ func (t *Target) DeploymentName() string {
 	} else {
 		return "NONAME"
 	}
+}
+
+func (t *Target) Dependencies() []*Target {
+	return t.dependencies
 }
 
 func (t *Target) Status() TargetState {
@@ -412,10 +444,13 @@ func (t *Target) Copy() (*Target, error) {
 	return &Target{
 		RecipeName: t.RecipeName,
 		RecipeIaas: t.RecipeIaas,
+		DependentTargets: t.DependentTargets,
 
 		Recipe:   recipeCopy.(cookbook.Recipe),
 		Provider: providerCopy.(provider.CloudProvider),
 		Backend:  backendCopy.(backend.CloudBackend),
+
+		dependencies: t.dependencies,
 
 		Output: t.Output,
 
@@ -449,13 +484,40 @@ func (t *Target) PrepareBackend() error {
 }
 
 // returns a launcher for this target
-func (t *Target) NewBuilder(outputBuffer, errorBuffer io.Writer) (*Builder, error) {
+func (t *Target) NewBuilder(
+	outputBuffer, 
+	errorBuffer io.Writer,
+) (*Builder, error) {
+
+	additonalInputs := make(map[string]string)
+	for _, dt := range t.dependencies {
+		for name, output := range *dt.Output {
+			if name != "cb_managed_instances" {
+				
+				switch v := output.Value.(type) {
+				case bool:
+					additonalInputs[name] = strconv.FormatBool(v)
+				case int:
+					additonalInputs[name] = strconv.Itoa(v)
+				case string:
+					additonalInputs[name] = v
+				default:
+					b, err := json.Marshal(v)
+					if err != nil {
+						return nil, err
+					}
+					additonalInputs[name] = string(b)
+				}
+			}
+		}
+	}
 
 	return NewBuilder(
 		strings.Join(t.Recipe.GetKeyFieldValues(), "/"),
 		t.Recipe,
 		t.Provider,
 		t.Backend,
+		additonalInputs,
 		outputBuffer,
 		errorBuffer)
 }
@@ -479,7 +541,11 @@ func (i *ManagedInstance) FQDN() string {
 }
 
 func (i *ManagedInstance) SSHAddress() string {
-	return fmt.Sprintf("%s:%s", i.publicIP, i.sshPort)
+	if len(i.publicIP) > 0 {
+		return fmt.Sprintf("%s:%s", i.publicIP, i.sshPort)
+	} else {
+		return fmt.Sprintf("%s:%s", i.privateIP, i.sshPort)
+	}
 }
 
 func (i *ManagedInstance) SSHUser() string {

@@ -27,6 +27,7 @@ var _ = Describe("Runner", func() {
 
 		output map[string]terraform.Output
 
+		planRequestKey,
 		applyRequestKey,
 		outputRequestKey string
 	)
@@ -51,13 +52,27 @@ var _ = Describe("Runner", func() {
 					"test_input": terraform.Input{false},
 				})
 
+			planRequestKey = cli.AddFakeResponse(
+				[]string{
+					"plan",
+					"-input=false",
+					"-out=tf.plan",
+					"-var", "test_input=arg value 1",
+					testRecipePath,
+				},
+				[]string{
+					"envvar1=envvar value 1",
+					"envvar2=envvar value 2",
+				},
+				"Plan: 1 to add, 0 to change, 0 to destroy.",
+				"",
+				nil,
+			)
+
 			applyRequestKey = cli.AddFakeResponse(
 				[]string{
 					"apply",
-					"-auto-approve",
-					"-input=false",
-					"-var", "test_input=arg value 1",
-					testRecipePath,
+					"tf.plan",
 				},
 				[]string{
 					"envvar1=envvar value 1",
@@ -163,21 +178,7 @@ var _ = Describe("Runner", func() {
 
 			It("executes 'terraform plan' with given environment and variables and reads output", func() {
 
-				cli.ExpectFakeRequest(cli.AddFakeResponse(
-					[]string{
-						"plan",
-						"-input=false",
-						"-var", "test_input=arg value 1",
-						testRecipePath,
-					},
-					[]string{
-						"envvar1=envvar value 1",
-						"envvar2=envvar value 2",
-					},
-					"Plan: 1 to add, 0 to change, 0 to destroy.",
-					"",
-					nil,
-				))
+				cli.ExpectFakeRequest(planRequestKey)
 
 				runner.SetEnv(
 					map[string]string{
@@ -246,6 +247,7 @@ var _ = Describe("Runner", func() {
 
 			It("executes 'terraform apply' with given environment and variables and reads output", func() {
 
+				cli.ExpectFakeRequest(planRequestKey)
 				cli.ExpectFakeRequest(applyRequestKey)
 				cli.ExpectFakeRequest(outputRequestKey)
 
@@ -272,26 +274,33 @@ var _ = Describe("Runner", func() {
 					Type:      "number",
 					Value:     "2",
 				}))
-				Expect(outputBuffer.String()).To(HavePrefix("Apply complete!"))
+				Expect(outputBuffer.String()).To(HavePrefix("Plan: 1 to add, 0 to change, 0 to destroy.Apply complete!"))
 				Expect(errorBuffer.String()).To(Equal(""))
 			})
 
 			It("handles 'terraform apply' failure", func() {
 
+				cli.ExpectFakeRequest(planRequestKey)
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
 						"apply",
-						"-auto-approve",
-						"-input=false",
-						"-var", "test_input=arg value 1",
-						testRecipePath,
+						"tf.plan",
 					},
-					[]string{},
+					[]string{
+						"envvar1=envvar value 1",
+						"envvar2=envvar value 2",
+					},
 					"",
 					"Error: oops something went wrong",
 					fmt.Errorf("Error!"),
 				))
 
+				runner.SetEnv(
+					map[string]string{
+						"envvar1": "envvar value 1",
+						"envvar2": "envvar value 2",
+					},
+				)
 				output, err = runner.Apply(
 					map[string]string{
 						"test_input": "arg value 1",
@@ -435,9 +444,9 @@ var _ = Describe("Runner", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
-						"apply",
-						"-auto-approve",
+						"plan",
 						"-input=false",
+						"-out=tf.plan",
 						"-var", "test_input_1=abcd1",
 						"-var", "test_input_2=abcd2",
 						"-var", "test_input_3=abcd3",
@@ -450,7 +459,16 @@ var _ = Describe("Runner", func() {
 					"",
 					nil,
 				))
-
+				cli.ExpectFakeRequest(cli.AddFakeResponse(
+					[]string{
+						"apply",
+						"tf.plan",
+					},
+					[]string{},
+					"",
+					"",
+					nil,
+				))
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
 						"output",

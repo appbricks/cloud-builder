@@ -2,12 +2,15 @@ package cookbook_test
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
 
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/mevansam/goutils/logger"
+	"github.com/mevansam/goutils/run"
 	"github.com/mevansam/goutils/utils"
 
 	. "github.com/onsi/ginkgo"
@@ -65,8 +68,8 @@ var _ = Describe("Cookbook", func() {
 				)
 
 				recipeSet := map[string][]string{
-					"basic":  []string{"aws", "google"},
-					"simple": []string{"google"},
+					"basic":  {"aws", "google"},
+					"simple": {"google"},
 				}
 
 				recipeList := c.RecipeList()
@@ -82,6 +85,49 @@ var _ = Describe("Cookbook", func() {
 					}
 				}
 			})
+		})
+	})
+
+	Describe("Cookbook Runtime", func() {
+
+		BeforeEach(func() {
+			outputBuffer.Reset()
+			errorBuffer.Reset()
+		})
+
+		It("creates the correct runtime directory structure", func() {
+
+			var (
+				cli run.CLI
+
+				fi os.FileInfo
+			)
+
+			runPath := filepath.Join(workspacePath, "run", "recipes", "basic", "aws", "test")
+			lockFile := filepath.Join(runPath, ".terraform.lock.hcl")
+			labelModule := filepath.Join(runPath, ".terraform", "modules", "label")
+			moduleMeta := filepath.Join(runPath, ".terraform", "modules", "modules.json")
+
+			r := c.GetRecipe("basic", "aws")
+			Expect(r).NotTo(BeNil())
+			
+			cli, err = r.CreateCLI("test", &outputBuffer, &errorBuffer)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cli.WorkingDirectory()).To(Equal(runPath))
+
+			fi, err = os.Lstat(cli.ExecutablePath())
+			Expect(os.IsNotExist(err)).To(BeFalse())
+			Expect(fi.Mode().Perm()&0111).NotTo(Equal(0))
+
+			fi, err = os.Lstat(lockFile)
+			Expect(os.IsNotExist(err)).To(BeFalse())
+			Expect(fi.Mode() & os.ModeSymlink).To(Equal(os.ModeSymlink))
+			fi, err = os.Lstat(labelModule)
+			Expect(os.IsNotExist(err)).To(BeFalse())
+			Expect(fi.Mode() & os.ModeSymlink).To(Equal(os.ModeSymlink))
+			fi, err = os.Lstat(moduleMeta)
+			Expect(os.IsNotExist(err)).To(BeFalse())
+			Expect(fi.Mode() & os.ModeSymlink).To(Equal(os.ModeSymlink))
 		})
 	})
 

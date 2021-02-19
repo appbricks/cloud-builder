@@ -299,6 +299,7 @@ const configDocument = `
 			{
 				"recipeName": "basic",
 				"recipeIaas": "aws",
+				"dependentTargets": [],
 				"recipe": {
 					"variables": ` + test_data.AWSBasicRecipeVariables1 + `
 				},
@@ -308,6 +309,7 @@ const configDocument = `
 			{
 				"recipeName": "basic",
 				"recipeIaas": "aws",
+				"dependentTargets": [],
 				"recipe": {
 					"variables": ` + test_data.AWSBasicRecipeVariables2 + `
 				},

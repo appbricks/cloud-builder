@@ -122,7 +122,8 @@ var _ = Describe("Target", func() {
 
 const expectedTargetConfig = `{
   "recipeName": "basic",
-  "recipeIaas": "aws",
+	"recipeIaas": "aws",
+	"dependentTargets": [],
   "recipe": {
     "variables": [
       {
