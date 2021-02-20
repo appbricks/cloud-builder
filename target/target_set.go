@@ -193,6 +193,7 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		}
 	}
 
+	OUTER:
 	for _, target := range targetsWithDependencies {
 		for _, dependentTarget := range target.DependentTargets {
 			t := ts.targets[dependentTarget]
@@ -202,6 +203,7 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 					dependentTarget, target.Key())
 
 				delete(ts.targets, target.Key())
+				continue OUTER
 			}
 			target.dependencies = append(target.dependencies, t)
 		}
