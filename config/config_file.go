@@ -34,7 +34,6 @@ type configFile struct {
 	path      string
 	timestamp int64
 
-	secured    bool
 	keyTimeout int64
 	passphrase string
 
