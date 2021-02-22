@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/appbricks/cloud-builder/cookbook"
+	"github.com/appbricks/cloud-builder/target"
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/provider"
 	"github.com/mevansam/goforms/config"
-	"github.com/appbricks/cloud-builder/cookbook"
-	"github.com/appbricks/cloud-builder/target"
+	"github.com/mevansam/goutils/logger"
 )
 
 // global configuration context
@@ -387,5 +388,7 @@ func (cc *configContext) GetTarget(name string) (*target.Target, error) {
 }
 
 func (cc *configContext) SaveTarget(key string, target *target.Target) {
-	cc.targets.SaveTarget(key, target)
+	if err := cc.targets.SaveTarget(key, target); err != nil {
+		logger.DebugMessage("Error saving target '%s': %s", key, err.Error())
+	}
 }
