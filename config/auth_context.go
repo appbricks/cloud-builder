@@ -15,6 +15,10 @@ func NewAuthContext() *authContext {
 	return &authContext{}
 }
 
+func (ac *authContext) Reset() {
+	ac.token = &oauth2.Token{}
+}
+
 func (ac *authContext) Load(input io.Reader) error {
 	decoder := json.NewDecoder(input)
 	ac.token = &oauth2.Token{}
@@ -32,8 +36,4 @@ func (ac *authContext) SetToken(token *oauth2.Token) {
 
 func (ac *authContext) GetToken() *oauth2.Token {
 	return ac.token
-}
-
-func (ac *authContext) Reset() {
-	ac.token = &oauth2.Token{}
 }

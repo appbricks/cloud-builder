@@ -162,6 +162,26 @@ func InitFileConfig(
 	return config, nil
 }
 
+func (cf *configFile) Reset() error {
+
+	var (
+		err error
+	)
+
+	cf.authContext.Reset()
+	if err = cf.context.Reset(); err != nil {
+		return err
+	}
+
+	cf.Set("initialized", false)
+	cf.Set("keyTimeout", -1)
+
+	cf.keyTimeout = -1
+	cf.passphrase = ""
+
+	return nil
+}
+
 func (cf *configFile) Load() error {
 
 	var (

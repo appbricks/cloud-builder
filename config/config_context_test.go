@@ -108,6 +108,10 @@ var _ = Describe("Config Context", func() {
 				tgt2.Recipe.(cookbook.Recipe).GetVariables(),
 				test_data.AWSBasicRecipeVariables2AsMap,
 			)
+
+			user, exists := ctx.GetPrimaryUser()
+			Expect(exists).To(BeTrue())
+			Expect(user).To(Equal("username"))
 		})
 
 		It("writes a configuration document", func() {
@@ -139,6 +143,14 @@ var _ = Describe("Config Context", func() {
 			actual, err = utils.GetValueAtPath("cloud/backends", actualConfigData)
 			Expect(err).NotTo(HaveOccurred())
 			expected, err = utils.GetValueAtPath("cloud/backends", expectedConfigData)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(actual).To(Equal(expected))
+
+			// Validate users 
+			actual, err = utils.GetValueAtPath("users", actualConfigData)
+			Expect(err).NotTo(HaveOccurred())
+			expected, err = utils.GetValueAtPath("users", expectedConfigData)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(actual).To(Equal(expected))
@@ -176,19 +188,23 @@ var _ = Describe("Config Context", func() {
 			// target must be sorted in order for deep equal to work.
 			targets, ok := actual.([]interface{})
 			Expect(ok).To(BeTrue())
+
+			targetRecipeVariables1, err := utils.GetValueAtPath("recipe/variables", targets[0])
+			Expect(err).NotTo(HaveOccurred())
+			err = utils.SortValueMap("name", targetRecipeVariables1)
+			Expect(err).NotTo(HaveOccurred())
+			targetRecipeVariables2, err := utils.GetValueAtPath("recipe/variables", targets[1])
+			Expect(err).NotTo(HaveOccurred())
+			err = utils.SortValueMap("name", targetRecipeVariables2)
+			Expect(err).NotTo(HaveOccurred())
+			// ensure actual target order will be same as that of expected
+			if targetRecipeVariables1.([]interface{})[0].(map[string]interface{})["value"] == "cc" {
+				temp := targets[0]
+				targets[0] = targets[1]
+				targets[1] = temp
+			}
+			
 			err = utils.SortValueMap("recipeName", targets)
-			Expect(err).NotTo(HaveOccurred())
-
-			targetRecipeVariables, err := utils.GetValueAtPath("recipe/variables", targets[0])
-			Expect(err).NotTo(HaveOccurred())
-			err = utils.SortValueMap("name", targetRecipeVariables)
-			Expect(err).NotTo(HaveOccurred())
-			targetRecipeVariables, err = utils.GetValueAtPath("recipe/variables", targets[1])
-			Expect(err).NotTo(HaveOccurred())
-			err = utils.SortValueMap("name", targetRecipeVariables)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = utils.SortValueMap("recipeName", actual)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(actual).To(Equal(expected))
@@ -205,6 +221,14 @@ var _ = Describe("Config Context", func() {
 				form  forms.InputForm
 				value *string
 			)
+
+			// change primary user
+			err = ctx.SetPrimaryUser("johndoe")
+			Expect(err).NotTo(HaveOccurred())
+
+			user, exists := ctx.GetPrimaryUser()
+			Expect(exists).To(BeTrue())
+			Expect(user).To(Equal("johndoe"))
 
 			// provider elements
 			form, err = cpAWS.InputForm()
@@ -317,6 +341,15 @@ const configDocument = `
 				"backend": ` + cloud_test_data.S3BackendConfig + `
 			}
 		]
+	},
+	"users": {
+		"primary": {
+			"name": "username",
+			"rsaPrivateKey": "rsa private key",
+			"rsaPublicKey": "rsa public key",
+			"wgPrivateKey": "wg private key",
+			"wgPublickKey": "wg public key"
+		}
 	}
 }
 `

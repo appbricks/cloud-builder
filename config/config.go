@@ -13,6 +13,8 @@ import (
 
 // provides an interface for managing application configuration
 type Config interface {
+	Reset() error
+
 	Load() error
 	Save() error
 
@@ -32,16 +34,19 @@ type Config interface {
 
 // provides an interface for saving and retrieving an oauth token
 type AuthContext interface {
+	Reset()
+
 	Load(input io.Reader) error
 	Save(output io.Writer) error
 
 	SetToken(token *oauth2.Token)
 	GetToken() *oauth2.Token
-	Reset()
 }
 
 // provides an interface for managing the configuration context
 type Context interface {
+	Reset() error
+
 	Load(input io.Reader) error
 	Save(output io.Writer) error
 
@@ -58,4 +63,7 @@ type Context interface {
 	HasTarget(name string) bool
 	GetTarget(name string) (*target.Target, error)
 	SaveTarget(key string, target *target.Target)
+
+	SetPrimaryUser(name string) error
+	GetPrimaryUser() (string, bool)
 }
