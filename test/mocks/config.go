@@ -17,6 +17,10 @@ func NewMockConfig(context config.Context) config.Config {
 	}
 }
 
+func (mc *MockConfig) Reset() error {
+	return nil
+}
+
 func (mc *MockConfig) Load() error {
 	return nil
 }
