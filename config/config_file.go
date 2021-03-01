@@ -279,7 +279,7 @@ func (cf *configFile) Save() error {
 
 	// set value in config file 
 	var setValue = func(key string, value string) error {
-		logger.TraceMessage("Saving serialized value of key %s: %s", key, value)
+		logger.TraceMessage("Saving serialized value of key \"%s\": %s", key, value)
 	
 		if crypt != nil {
 			var encryptedContext string
