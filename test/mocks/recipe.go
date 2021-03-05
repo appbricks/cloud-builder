@@ -17,6 +17,8 @@ type FakeRecipe struct {
 
 	cli        run.CLI
 	recipePath string
+
+	isBastion bool
 }
 
 func NewFakeRecipe(cli run.CLI) *FakeRecipe {
@@ -51,7 +53,7 @@ func (f *FakeRecipe) ConfigPath() string {
 	return f.recipePath
 }
 
-func (f *FakeRecipe) ProviderPath() string {
+func (f *FakeRecipe) PluginPath() string {
 	return "/fake/providerpath"
 }
 
@@ -94,8 +96,12 @@ func (f *FakeRecipe) GetVariables() []*cookbook.Variable {
 	return variables
 }
 
+func (f *FakeRecipe) SetBastion() {
+	f.isBastion = true
+}
+
 func (f *FakeRecipe) IsBastion() bool {
-	return false
+	return f.isBastion
 }
 
 func (f *FakeRecipe) ResourceInstanceList() []string {

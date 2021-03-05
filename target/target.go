@@ -1,10 +1,13 @@
 package target
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,6 +56,8 @@ type Target struct {
 	description string
 	version     string
 
+	rootCACert string
+
 	managedInstances []*ManagedInstance
 	compute          cloud.Compute
 }
@@ -71,10 +76,13 @@ type ManagedInstance struct {
 	fqdn,
 	publicIP,
 	privateIP,
+	apiPort,
 	sshPort,
 	sshUser,
 	sshKey,
-	rootPasswd string
+	rootPasswd,
+	userPasswd,
+	rootCACert string
 }
 
 func NewTarget(
@@ -150,6 +158,12 @@ func (t *Target) LoadRemoteRefs() error {
 				return fmt.Errorf("node version key value is not a string")
 			}
 		}
+		if output, ok = (*t.Output)["cb_root_ca_cert"]; ok {
+			if t.rootCACert, ok = output.Value.(string); !ok {
+				return fmt.Errorf("node root ca certificate key value is not a string")
+			}
+		}
+
 		if output, ok = (*t.Output)["cb_managed_instances"]; ok {
 
 			if managedInstanceValues, ok = output.Value.([]interface{}); !ok {
@@ -168,8 +182,9 @@ func (t *Target) LoadRemoteRefs() error {
 				}
 
 				instance = &ManagedInstance{
-					Metadata: instanceMetaData,
-					order:    math.MaxInt64,
+					Metadata:   instanceMetaData,
+					order:      math.MaxInt64,
+					rootCACert: t.rootCACert,
 				}
 				if value, ok = instanceMetaData["order"]; ok {
 					if order, ok = value.(float64); !ok {
@@ -195,6 +210,9 @@ func (t *Target) LoadRemoteRefs() error {
 				if instance.privateIP, err = readKeyValue("private_ip"); err != nil {
 					return err
 				}
+				if instance.apiPort, err = readKeyValue("api_port"); err != nil {
+					return err
+				}
 				if instance.sshPort, err = readKeyValue("ssh_port"); err != nil {
 					return err
 				}
@@ -205,6 +223,9 @@ func (t *Target) LoadRemoteRefs() error {
 					return err
 				}
 				if instance.rootPasswd, err = readKeyValue("root_passwd"); err != nil {
+					return err
+				}
+				if instance.userPasswd, err = readKeyValue("user_passwd"); err != nil {
 					return err
 				}
 
@@ -558,4 +579,60 @@ func (i *ManagedInstance) SSHKey() []byte {
 
 func (i *ManagedInstance) RootPassword() string {
 	return i.rootPasswd
+}
+
+func (i *ManagedInstance) UserPassword() string {
+	return i.userPasswd
+}
+
+func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
+
+	var (
+		client *http.Client
+		host   string		
+	)
+
+	endpoint := i.fqdn
+	if len(endpoint) == 0 {
+		endpoint = i.publicIP
+	}
+	if len(endpoint) == 0 {
+		return nil, "", fmt.Errorf(
+			"unable to determine endpoint for instance \"%s\"",
+			i.name,
+		)
+	}
+
+	if len(i.rootCACert) > 0 {
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM([]byte(i.rootCACert))
+	
+		client = &http.Client{
+			Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+							RootCAs: caCertPool,
+					},
+			},
+		}
+	} else {
+		client = &http.Client{
+			Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{},
+			},
+		}
+	}
+	if len(i.fqdn) > 0 {
+		host = i.fqdn
+	} else if len(i.publicIP) > 0 {
+		host = i.publicIP
+	} else if len(i.privateIP) > 0 {
+		host = i.privateIP
+	} else {
+		return nil, "", fmt.Errorf("unable to determine the managed instances host name")
+	}
+	if len(i.apiPort) > 0 {
+		return client, fmt.Sprintf("https://%s:%s", host, i.apiPort), nil	
+	} else {
+		return client, fmt.Sprintf("https://%s", host), nil	
+	}
 }

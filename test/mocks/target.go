@@ -7,6 +7,10 @@ import (
 	"github.com/appbricks/cloud-builder/target"
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/provider"
+	"github.com/mevansam/goutils/run"
+
+	backend_mocks "github.com/mevansam/gocloud/test/mocks"
+	provider_mocks "github.com/mevansam/gocloud/test/mocks"
 )
 
 type FakeTargetContext struct {
@@ -49,4 +53,16 @@ func (mctx *FakeTargetContext) NewTarget(
 	}
 
 	return target.NewTarget(r, p, b), nil
+}
+
+func NewMockTarget(cli run.CLI) *target.Target {
+
+	return &target.Target{
+		RecipeName: "fakeRecipe",
+		RecipeIaas: "fakeIAAS",
+
+		Recipe: NewFakeRecipe(cli),
+		Provider: provider_mocks.NewFakeCloudProvider(),
+		Backend: backend_mocks.NewFakeCloudBackend(),
+	}
 }
