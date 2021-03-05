@@ -129,7 +129,7 @@ func (authn *Authenticator) StartOAuthFlow(
 }
 
 // Wait until OAuth flow has completed. Returns
-// false is oath flow completes with callback
+// false if oath flow completes with callback
 // to local server
 func (authn *Authenticator) WaitForOAuthFlowCompletion(timeout time.Duration) (bool, error) {
 	c := make(chan struct{})
