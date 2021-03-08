@@ -80,8 +80,10 @@ type ManagedInstance struct {
 	sshPort,
 	sshUser,
 	sshKey,
+	rootUser,
 	rootPasswd,
-	userPasswd,
+	nonRootUser,
+	nonRootPasswd,
 	rootCACert string
 }
 
@@ -222,10 +224,16 @@ func (t *Target) LoadRemoteRefs() error {
 				if instance.sshKey, err = readKeyValue("ssh_key"); err != nil {
 					return err
 				}
+				if instance.rootUser, err = readKeyValue("root_user"); err != nil {
+					return err
+				}
 				if instance.rootPasswd, err = readKeyValue("root_passwd"); err != nil {
 					return err
 				}
-				if instance.userPasswd, err = readKeyValue("user_passwd"); err != nil {
+				if instance.nonRootUser, err = readKeyValue("non_root_user"); err != nil {
+					return err
+				}
+				if instance.nonRootPasswd, err = readKeyValue("non_root_passwd"); err != nil {
 					return err
 				}
 
@@ -577,12 +585,20 @@ func (i *ManagedInstance) SSHKey() []byte {
 	return []byte(i.sshKey)
 }
 
+func (i *ManagedInstance) RootUser() string {
+	return i.rootUser
+}
+
 func (i *ManagedInstance) RootPassword() string {
 	return i.rootPasswd
 }
 
-func (i *ManagedInstance) UserPassword() string {
-	return i.userPasswd
+func (i *ManagedInstance) NonRootUser() string {
+	return i.nonRootUser
+}
+
+func (i *ManagedInstance) NonRootPassword() string {
+	return i.nonRootPasswd
 }
 
 func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
