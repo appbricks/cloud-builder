@@ -29,18 +29,30 @@ type Config interface {
 
 	SetKeyTimeout(timeout time.Duration)
 	AuthContext() AuthContext
+	DeviceContext() DeviceContext
 	Context() Context
 }
 
 // provides an interface for saving and retrieving an oauth token
 type AuthContext interface {
-	Reset()
+	Reset() error
 
 	Load(input io.Reader) error
 	Save(output io.Writer) error
 
 	SetToken(token *oauth2.Token)
 	GetToken() *oauth2.Token
+}
+
+// provides an interface for saving and retrieving an oauth token
+type DeviceContext interface {
+	Reset() error
+
+	Load(input io.Reader) error
+	Save(output io.Writer) error
+
+	SetPrimaryUser(name string)
+	GetPrimaryUser() (string, bool)
 }
 
 // provides an interface for managing the configuration context
@@ -63,7 +75,4 @@ type Context interface {
 	HasTarget(name string) bool
 	GetTarget(name string) (*target.Target, error)
 	SaveTarget(key string, target *target.Target)
-
-	SetPrimaryUser(name string) error
-	GetPrimaryUser() (string, bool)
 }

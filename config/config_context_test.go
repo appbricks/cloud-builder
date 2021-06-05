@@ -108,10 +108,6 @@ var _ = Describe("Config Context", func() {
 				tgt2.Recipe.(cookbook.Recipe).GetVariables(),
 				test_data.AWSBasicRecipeVariables2AsMap,
 			)
-
-			user, exists := ctx.GetPrimaryUser()
-			Expect(exists).To(BeTrue())
-			Expect(user).To(Equal("username"))
 		})
 
 		It("writes a configuration document", func() {
@@ -143,14 +139,6 @@ var _ = Describe("Config Context", func() {
 			actual, err = utils.GetValueAtPath("cloud/backends", actualConfigData)
 			Expect(err).NotTo(HaveOccurred())
 			expected, err = utils.GetValueAtPath("cloud/backends", expectedConfigData)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(actual).To(Equal(expected))
-
-			// Validate users 
-			actual, err = utils.GetValueAtPath("users", actualConfigData)
-			Expect(err).NotTo(HaveOccurred())
-			expected, err = utils.GetValueAtPath("users", expectedConfigData)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(actual).To(Equal(expected))
@@ -221,14 +209,6 @@ var _ = Describe("Config Context", func() {
 				form  forms.InputForm
 				value *string
 			)
-
-			// change primary user
-			err = ctx.SetPrimaryUser("johndoe")
-			Expect(err).NotTo(HaveOccurred())
-
-			user, exists := ctx.GetPrimaryUser()
-			Expect(exists).To(BeTrue())
-			Expect(user).To(Equal("johndoe"))
 
 			// provider elements
 			form, err = cpAWS.InputForm()
@@ -341,15 +321,6 @@ const configDocument = `
 				"backend": ` + cloud_test_data.S3BackendConfig + `
 			}
 		]
-	},
-	"users": {
-		"primary": {
-			"name": "username",
-			"rsaPrivateKey": "rsa private key",
-			"rsaPublicKey": "rsa public key",
-			"wgPrivateKey": "wg private key",
-			"wgPublickKey": "wg public key"
-		}
 	}
 }
 `

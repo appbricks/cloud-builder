@@ -7,7 +7,6 @@ import (
 
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/target"
-	"github.com/appbricks/cloud-builder/user"
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/provider"
 	"github.com/mevansam/goforms/config"
@@ -18,7 +17,6 @@ import (
 type configContext struct {
 	cookbook *cookbook.Cookbook
 	targets  *target.TargetSet
-	users    *user.TargetUsers
 
 	providers map[string]provider.CloudProvider
 	backends  map[string]backend.CloudBackend
@@ -42,7 +40,6 @@ func NewConfigContext(cookbook *cookbook.Cookbook) (Context, error) {
 		return nil, err
 	}
 	ctx.targets = target.NewTargetSet(ctx)
-	ctx.users = &user.TargetUsers{}
 	return ctx, nil
 }
 
@@ -59,7 +56,6 @@ func (cc *configContext) Reset() error {
 		return err
 	}
 	cc.targets = target.NewTargetSet(cc)
-	cc.users = &user.TargetUsers{}
 	return nil
 }
 
@@ -113,10 +109,6 @@ func (cc *configContext) Load(input io.Reader) error {
 					switch key {
 					case "cloud":
 						elemStack = append(elemStack, cloud)
-					case "users":
-						if err = decoder.Decode(cc.users); err != nil {
-							return err
-						}
 					default:
 						return fmt.Errorf(
 							"invalid root config key '%s'",
@@ -261,14 +253,6 @@ func (cc *configContext) Save(output io.Writer) error {
 		// end cloud
 		'}',
 	}); err != nil {
-		return err
-	}
-
-	// users
-	if _, err = fmt.Fprint(output, ",\"users\":"); err != nil {
-		return err
-	}
-	if err = encoder.Encode(cc.users); err != nil {
 		return err
 	}
 
@@ -428,18 +412,4 @@ func (cc *configContext) SaveTarget(key string, target *target.Target) {
 	if err := cc.targets.SaveTarget(key, target); err != nil {
 		logger.DebugMessage("Error saving target '%s': %s", key, err.Error())
 	}
-}
-
-func (cc *configContext) SetPrimaryUser(name string) error {
-	cc.users.Primary = &user.User{
-		Name: name,
-	}
-	return nil
-}
-
-func (cc *configContext) GetPrimaryUser() (string, bool) {
-	if cc.users.Primary == nil {
-		return "", false
-	}
-	return cc.users.Primary.Name, true
 }

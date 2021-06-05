@@ -303,6 +303,7 @@ func (ac *TestAuthContext) GetToken() *oauth2.Token {
 	return ac.token
 }
 
-func (ac *TestAuthContext) Reset() {
+func (ac *TestAuthContext) Reset() error {
 	ac.token = nil
+	return nil
 }

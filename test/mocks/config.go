@@ -8,6 +8,7 @@ import (
 
 type MockConfig struct {
 	authContext config.AuthContext
+	deviceContext config.DeviceContext
 	context config.Context
 }
 
@@ -55,6 +56,10 @@ func (mc *MockConfig) SetKeyTimeout(timeout time.Duration) {
 
 func (mc *MockConfig) AuthContext() config.AuthContext {
 	return mc.authContext
+}
+
+func (mc *MockConfig) DeviceContext() config.DeviceContext {
+	return mc.deviceContext
 }
 
 func (mc *MockConfig) Context() config.Context {

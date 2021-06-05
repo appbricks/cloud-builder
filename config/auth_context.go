@@ -15,8 +15,9 @@ func NewAuthContext() *authContext {
 	return &authContext{}
 }
 
-func (ac *authContext) Reset() {
+func (ac *authContext) Reset() error {
 	ac.token = &oauth2.Token{}
+	return nil
 }
 
 func (ac *authContext) Load(input io.Reader) error {

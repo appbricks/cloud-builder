@@ -37,8 +37,9 @@ type configFile struct {
 	keyTimeout int64
 	passphrase string
 
-	authContext AuthContext
-	context Context
+	authContext   AuthContext
+	deviceContext DeviceContext
+	context       Context
 }
 
 // initializes file based configuration
@@ -74,6 +75,9 @@ func InitFileConfig(
 
 	// initialize auth context
 	config.authContext = NewAuthContext()
+
+	// initialize device context
+	config.deviceContext = NewDeviceContext()
 
 	// initialize cookbook configuration context
 	if config.context, err = NewConfigContext(cookbook); err != nil {
@@ -168,7 +172,12 @@ func (cf *configFile) Reset() error {
 		err error
 	)
 
-	cf.authContext.Reset()
+	if err = cf.authContext.Reset(); err != nil {
+		return err
+	}
+	if err = cf.deviceContext.Reset(); err != nil {
+		return err
+	}
 	if err = cf.context.Reset(); err != nil {
 		return err
 	}
@@ -232,6 +241,16 @@ func (cf *configFile) Load() error {
 	}
 	if contextReader != nil {
 		if err = cf.authContext.Load(contextReader); err != nil {
+			return err
+		}
+	}
+
+	// load device context
+	if contextReader, err = getValue("deviceContext"); err != nil {
+		return err
+	}
+	if contextReader != nil {
+		if err = cf.deviceContext.Load(contextReader); err != nil {
 			return err
 		}
 	}
@@ -303,10 +322,17 @@ func (cf *configFile) Save() error {
 		return err
 	}
 
-	// reset so output buffer can be reused
+	// save device context
 	contextOutput.Reset()
+	if err = cf.deviceContext.Save(&contextOutput); err != nil {
+		return err
+	}
+	if err = setValue("deviceContext", contextOutput.String()); err != nil {
+		return err
+	}
 
 	// save config context
+	contextOutput.Reset()
 	if err = cf.context.Save(&contextOutput); err != nil {
 		return err
 	}
@@ -387,6 +413,10 @@ func (cf *configFile) SetKeyTimeout(timeout time.Duration) {
 
 func (cf *configFile) AuthContext() AuthContext {
 	return cf.authContext
+}
+
+func (cf *configFile) DeviceContext() DeviceContext {
+	return cf.deviceContext
 }
 
 func (cf *configFile) Context() Context {

@@ -20,7 +20,7 @@ import (
 	test_data "github.com/appbricks/cloud-builder/test/data"
 )
 
-var _ = Describe("Config File", func() {
+var _ = FDescribe("Config File", func() {
 
 	var (
 		err error
@@ -216,6 +216,9 @@ func updateContextWithTestData(cfg config.Config) {
 		TokenType: "token type",
 	})
 
+	devCtx := cfg.DeviceContext()
+	devCtx.SetPrimaryUser("johnd")
+
 	ctx := cfg.Context()
 	Expect(ctx).ToNot(BeNil())
 	cp, err = ctx.GetCloudProvider("aws")
@@ -243,6 +246,11 @@ func validateContextTestData(cfg config.Config) {
 	Expect(token.AccessToken).To(Equal("access token"))
 	Expect(token.RefreshToken).To(Equal("refresh token"))
 	Expect(token.TokenType).To(Equal("token type"))
+
+	devCtx := cfg.DeviceContext()
+	user, exists := devCtx.GetPrimaryUser()
+	Expect(exists).To(BeTrue())
+	Expect(user).To(Equal("johnd"))
 
 	ctx := cfg.Context()
 	Expect(ctx).ToNot(BeNil())
