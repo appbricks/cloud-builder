@@ -12,8 +12,15 @@ type MockConfig struct {
 	context config.Context
 }
 
-func NewMockConfig(context config.Context) config.Config {
+func NewMockConfig(
+	authContext config.AuthContext,
+	deviceContext config.DeviceContext,
+	context config.Context,
+) config.Config {
+
 	return &MockConfig{
+		authContext: authContext,
+		deviceContext: deviceContext,
 		context: context,
 	}
 }
