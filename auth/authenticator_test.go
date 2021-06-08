@@ -33,7 +33,6 @@ var _ = Describe("Authenticator", func() {
 		err error
 		oathServer *http.Server
 		authn *auth.Authenticator
-
 	)
 
 	authSync := sync.WaitGroup{}
