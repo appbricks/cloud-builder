@@ -11,7 +11,7 @@ import (
 	"github.com/appbricks/cloud-builder/config"
 )
 
-var _ = Describe("Auth Context", func() {
+var _ = FDescribe("Auth Context", func() {
 
 	It("loads and saves the auth context", func() {
 
@@ -22,7 +22,8 @@ var _ = Describe("Auth Context", func() {
 		token := authContext.GetToken()
 		Expect(token.AccessToken).To(Equal("MJUYMWZIOGMTMTFLYY0ZNTE2LWIXNTATZTMWYJM3MZVJODRH"))
 		Expect(token.TokenType).To(Equal("Bearer"))
-		Expect(token.RefreshToken).To(Equal("MZC5OWUZYTCTY2QZNC01MWE3LWE4ZJGTMJKXYZLIMGJJZGU1"))
+		Expect(token.RefreshToken).To(Equal("MZC5OWUZYTCTY2QZNC01MWE3LWE4ZJGTMJKXYZLIMGJJZGU1"))										                    
+		Expect(token.Extra("id_token")).To(Equal("JASIUHQQWHKJHASKJHASDIUAHDQIUDHQKDHASKDHCASKHASA"))
 
 		expiry, _ := time.Parse(time.RFC3339, "2021-01-21T21:56:20.457563-05:00")
 		Expect(token.Expiry).To(Equal(expiry))
@@ -34,4 +35,4 @@ var _ = Describe("Auth Context", func() {
 	})
 })
 
-const jsonToken = `{"access_token":"MJUYMWZIOGMTMTFLYY0ZNTE2LWIXNTATZTMWYJM3MZVJODRH","token_type":"Bearer","refresh_token":"MZC5OWUZYTCTY2QZNC01MWE3LWE4ZJGTMJKXYZLIMGJJZGU1","expiry":"2021-01-21T21:56:20.457563-05:00"}`
+const jsonToken = `{"token":{"access_token":"MJUYMWZIOGMTMTFLYY0ZNTE2LWIXNTATZTMWYJM3MZVJODRH","token_type":"Bearer","refresh_token":"MZC5OWUZYTCTY2QZNC01MWE3LWE4ZJGTMJKXYZLIMGJJZGU1","expiry":"2021-01-21T21:56:20.457563-05:00"},"tokenExtra":{"id_token":"JASIUHQQWHKJHASKJHASDIUAHDQIUDHQKDHASKDHCASKHASA"}}`

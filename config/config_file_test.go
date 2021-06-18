@@ -20,7 +20,7 @@ import (
 	test_data "github.com/appbricks/cloud-builder/test/data"
 )
 
-var _ = FDescribe("Config File", func() {
+var _ = Describe("Config File", func() {
 
 	var (
 		err error
@@ -217,7 +217,8 @@ func updateContextWithTestData(cfg config.Config) {
 	})
 
 	devCtx := cfg.DeviceContext()
-	devCtx.SetPrimaryUser("johnd")
+	_, err = devCtx.NewOwnerUser("1234", "johnd")
+	Expect(err).ToNot(HaveOccurred())
 
 	ctx := cfg.Context()
 	Expect(ctx).ToNot(BeNil())
@@ -248,9 +249,12 @@ func validateContextTestData(cfg config.Config) {
 	Expect(token.TokenType).To(Equal("token type"))
 
 	devCtx := cfg.DeviceContext()
-	user, exists := devCtx.GetPrimaryUser()
+	userID, exists := devCtx.GetOwnerUserID()
 	Expect(exists).To(BeTrue())
-	Expect(user).To(Equal("johnd"))
+	Expect(userID).To(Equal("1234"))
+	userName, exists := devCtx.GetOwnerUserName()
+	Expect(exists).To(BeTrue())
+	Expect(userName).To(Equal("johnd"))
 
 	ctx := cfg.Context()
 	Expect(ctx).ToNot(BeNil())

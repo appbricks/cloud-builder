@@ -30,8 +30,8 @@ require (
 	github.com/otiai10/copy v1.4.2
 	github.com/spf13/viper v1.6.1
 	github.com/zclconf/go-cty v1.1.1
-	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20210506160403-92e472f520a5
 	google.golang.org/api v0.30.0
 	google.golang.org/appengine v1.6.7 // indirect
 )

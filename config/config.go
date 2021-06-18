@@ -8,6 +8,7 @@ import (
 
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/target"
+	"github.com/appbricks/cloud-builder/userspace"
 	"github.com/mevansam/gocloud/provider"
 )
 
@@ -42,6 +43,8 @@ type AuthContext interface {
 
 	SetToken(token *oauth2.Token)
 	GetToken() *oauth2.Token
+
+	IsLoggedIn() bool
 }
 
 // provides an interface for saving and retrieving an oauth token
@@ -51,8 +54,28 @@ type DeviceContext interface {
 	Load(input io.Reader) error
 	Save(output io.Writer) error
 
-	SetPrimaryUser(name string)
-	GetPrimaryUser() (string, bool)
+	NewDevice() (*userspace.Device, error)
+	UpdateDeviceKeys() (*userspace.Device, error)
+	SetDeviceID(deviceIDKey, deviceID, name string) *userspace.Device
+	GetDevice() *userspace.Device
+	GetDeviceIDKey() string
+	GetDeviceID() (string, bool)
+	GetDeviceName() (string, bool)
+
+	NewOwnerUser(userID, name string) (*userspace.User, error)
+	GetOwner() *userspace.User
+	GetOwnerUserID() (string, bool)
+	GetOwnerUserName() (string, bool)
+	IsAuthorizedUser(name string) bool
+
+	NewGuestUser(userID, name string) (*userspace.User, error)
+	AddGuestUser(user *userspace.User)
+	GetGuestUser(name string) (*userspace.User, bool)
+	ResetGuestUsers() map[string]*userspace.User
+
+	SetLoggedInUser(userID, userName string)
+	GetLoggedInUserID() string
+	GetLoggedInUserName() string
 }
 
 // provides an interface for managing the configuration context

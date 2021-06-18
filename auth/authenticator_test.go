@@ -286,6 +286,11 @@ type TestAuthContext struct {
 	token *oauth2.Token
 }
 
+func (ac *TestAuthContext) Reset() error {
+	ac.token = nil
+	return nil
+}
+
 func (ac *TestAuthContext) Load(input io.Reader) error {
 	return nil
 }
@@ -302,7 +307,17 @@ func (ac *TestAuthContext) GetToken() *oauth2.Token {
 	return ac.token
 }
 
-func (ac *TestAuthContext) Reset() error {
-	ac.token = nil
-	return nil
+func (ac *TestAuthContext) SetLoggedInUser(userID, userName string) {
+}
+
+func (ac *TestAuthContext) GetLoggedInUserID() string {
+	return ""
+}
+
+func (ac *TestAuthContext) GetLoggedInUserName() string {
+	return ""
+}
+
+func (ac *TestAuthContext) IsLoggedIn() bool {
+	return ac.token != nil && ac.token.Valid()
 }

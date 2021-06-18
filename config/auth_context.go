@@ -8,33 +8,52 @@ import (
 )
 
 type authContext struct {
-	token *oauth2.Token
+	Token *oauth2.Token `json:"token,omitempty"`
+	
+	// additional token data returned by derivative 
+	// oauth flows (i.e. cognito id_token)
+	Extra map[string]interface{} `json:"tokenExtra,omitempty"`
 }
 
 func NewAuthContext() *authContext {
-	return &authContext{}
+	return &authContext{
+		Token: &oauth2.Token{},
+		Extra: make(map[string]interface{}),
+	}
 }
 
 func (ac *authContext) Reset() error {
-	ac.token = &oauth2.Token{}
+	ac.Token = &oauth2.Token{}
+	ac.Extra = make(map[string]interface{})
 	return nil
 }
 
 func (ac *authContext) Load(input io.Reader) error {
 	decoder := json.NewDecoder(input)
-	ac.token = &oauth2.Token{}
-	return decoder.Decode(ac.token)
+	if err := decoder.Decode(ac); err != nil {
+		return err
+	}
+
+	// add saved extra token data to token
+	ac.Token = ac.Token.WithExtra(ac.Extra)
+	return nil
 }
 
 func (ac *authContext) Save(output io.Writer) error {
 	encoder := json.NewEncoder(output)
-	return encoder.Encode(ac.token)
+	// extract extra fields to persist
+	ac.Extra["id_token"] = ac.Token.Extra("id_token")
+	return encoder.Encode(ac)
 }
 
 func (ac *authContext) SetToken(token *oauth2.Token) {
-	ac.token = token
+	ac.Token = token
 }
 
 func (ac *authContext) GetToken() *oauth2.Token {
-	return ac.token
+	return ac.Token
+}
+
+func (ac *authContext) IsLoggedIn() bool {
+	return ac.Token != nil && ac.Token.Valid()
 }
