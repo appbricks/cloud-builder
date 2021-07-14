@@ -65,7 +65,7 @@ var _ = Describe("TargetSet", func() {
 			err = json.Unmarshal([]byte(targetConfigDocument), ts)
 			Expect(err).NotTo(HaveOccurred())
 
-			tgt1 = ts.GetTarget("basic/aws/aa/")
+			tgt1 = ts.GetTarget(tgt1Key)
 			Expect(tgt1).ToNot(BeNil())
 			Expect(tgt1.RecipeName).To(Equal("basic"))
 			Expect(tgt1.RecipeIaas).To(Equal("aws"))
@@ -73,14 +73,14 @@ var _ = Describe("TargetSet", func() {
 
 			tgtDeps := tgt1.Dependencies()
 			Expect(len(tgtDeps)).To(Equal(1))
-			Expect(tgtDeps[0].Key()).To(Equal("basic/aws/cc/appbrickscookbook"))
+			Expect(tgtDeps[0].Key()).To(Equal(tgt2Key))
 
 			test_data.ValidatePersistedVariables(
 				tgt1.Recipe.GetVariables(),
 				test_data.AWSBasicRecipeVariables1AsMap,
 			)
 
-			tgt2 = ts.GetTarget("basic/aws/cc/appbrickscookbook")
+			tgt2 = ts.GetTarget(tgt2Key)
 			Expect(tgt2).ToNot(BeNil())
 			Expect(tgt2.RecipeName).To(Equal("basic"))
 			Expect(tgt2.RecipeIaas).To(Equal("aws"))
@@ -111,7 +111,7 @@ var _ = Describe("TargetSet", func() {
 
 			// modify targets
 
-			tgt = ts.GetTarget("basic/aws/aa/")
+			tgt = ts.GetTarget(tgt1Key)
 			Expect(tgt).ToNot(BeNil())
 			inputForm, err = tgt.Recipe.InputForm()
 			Expect(err).NotTo(HaveOccurred())
@@ -122,12 +122,12 @@ var _ = Describe("TargetSet", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			tgt.DependentTargets = []string{}
-			err = ts.SaveTarget("basic/aws/aa/", tgt)
+			err = ts.SaveTarget(tgt1Key, tgt)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ts.GetTarget("basic/aws/aa/")).To(BeNil())
+			Expect(ts.GetTarget(tgt1Key)).To(BeNil())
 			Expect(ts.GetTarget("basic/aws/aa/cookbook")).ToNot(BeNil())
 
-			tgt = ts.GetTarget("basic/aws/cc/appbrickscookbook")
+			tgt = ts.GetTarget(tgt2Key)
 			Expect(tgt).ToNot(BeNil())
 			inputForm, err = tgt.Recipe.InputForm()
 			Expect(err).NotTo(HaveOccurred())
@@ -138,10 +138,10 @@ var _ = Describe("TargetSet", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			tgt.DependentTargets = []string{"basic/aws/aa/cookbook"}
-			err = ts.SaveTarget("basic/aws/cc/appbrickscookbook", tgt)
+			err = ts.SaveTarget(tgt2Key, tgt)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ts.GetTarget("basic/aws/cc/appbrickscookbook")).To(BeNil())
-			Expect(ts.GetTarget("basic/aws/bb/appbrickscookbook")).ToNot(BeNil())
+			Expect(ts.GetTarget(tgt2Key)).To(BeNil())
+			Expect(ts.GetTarget("basic/aws/bb/appbrickscookbook/<basic/aws/aa/cookbook")).ToNot(BeNil())
 
 			// serialize targets
 
@@ -229,6 +229,9 @@ var _ = Describe("TargetSet", func() {
 		})
 	})
 })
+
+const tgt1Key = `basic/aws/aa//<basic/aws/cc/appbrickscookbook`
+const tgt2Key = `basic/aws/cc/appbrickscookbook`
 
 const targetConfigDocument = `
 [

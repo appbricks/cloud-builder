@@ -54,7 +54,8 @@ var _ = Describe("Target", func() {
 		b, err = backend.NewCloudBackend("s3")
 		Expect(err).NotTo(HaveOccurred())
 
-		t = target.NewTarget(r, p, b)
+		t, err = target.NewTarget(r, p, b)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Context("target persistance", func() {
@@ -75,9 +76,9 @@ var _ = Describe("Target", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			form, err = b.InputForm()
-			err = form.SetFieldValue("bucket", "s3 bucket")
+			err = form.SetFieldValue("bucket", "s3bucket")
 			Expect(err).NotTo(HaveOccurred())
-			err = form.SetFieldValue("key", "s3 object key")
+			err = form.SetFieldValue("key", "s3objectkey")
 			Expect(err).NotTo(HaveOccurred())
 
 			encoder := json.NewEncoder(&outputBuffer)
@@ -164,8 +165,8 @@ const expectedTargetConfig = `{
 		"region": "us-east-1"
   },
   "backend": {
-		"bucket": "s3 bucket",
-		"key": "s3 object key"
+		"bucket": "s3bucket",
+		"key": "s3objectkey"
 	}
 }`
 

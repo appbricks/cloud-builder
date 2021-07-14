@@ -147,12 +147,13 @@ var _ = Describe("Builder", func() {
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
 						"init",
-						"-plugin-dir=/fake/pluginpath",
+						"-plugin-dir=/fake/providerpath",
 						"-backend-config=endpoint=http://backend",
 						"-backend-config=user=admin",
 						testRecipePath,
 					},
 					[]string{
+						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
 					},
@@ -175,11 +176,11 @@ var _ = Describe("Builder", func() {
 						"-out=tf.plan",
 						"-var", "test_input_1=arg value 1",
 						"-var", "test_input_2=arg value 2",
-						"-var", "test_input_3=arg value 3",
 						"-var", "test_input_4=arg value 4",
 						testRecipePath,
 					},
 					[]string{
+						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
 					},
@@ -202,6 +203,7 @@ var _ = Describe("Builder", func() {
 							resource,
 						},
 						[]string{
+							"TF_VAR_test_input_3=arg value 3",
 							"envvar1=provider value 1",
 							"envvar2=provider value 2",
 						},
@@ -225,6 +227,7 @@ var _ = Describe("Builder", func() {
 							resource,
 						},
 						[]string{
+							"TF_VAR_test_input_3=arg value 3",
 							"envvar1=provider value 1",
 							"envvar2=provider value 2",
 						},
@@ -248,11 +251,11 @@ var _ = Describe("Builder", func() {
 						"-out=tf.plan",
 						"-var", "test_input_1=arg value 1",
 						"-var", "test_input_2=arg value 2",
-						"-var", "test_input_3=arg value 3",
 						"-var", "test_input_4=arg value 4",
 						testRecipePath,
 					},
 					[]string{
+						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
 					},
@@ -267,6 +270,7 @@ var _ = Describe("Builder", func() {
 						"tf.plan",
 					},
 					[]string{
+						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
 					},
@@ -281,6 +285,7 @@ var _ = Describe("Builder", func() {
 						"-json",
 					},
 					[]string{
+						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
 					},
@@ -313,6 +318,7 @@ var _ = Describe("Builder", func() {
 						"-auto-approve",
 					},
 					[]string{
+						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
 					},

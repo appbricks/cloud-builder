@@ -11,7 +11,7 @@ import (
 	"github.com/appbricks/cloud-builder/config"
 )
 
-var _ = FDescribe("Auth Context", func() {
+var _ = Describe("Auth Context", func() {
 
 	It("loads and saves the auth context", func() {
 
