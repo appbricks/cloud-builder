@@ -113,7 +113,7 @@ var _ = Describe("Target", func() {
 			Expect(t.RecipeIaas).To(Equal("aws"))
 
 			test_data.ValidatePersistedVariables(
-				t.Recipe.(cookbook.Recipe).GetVariables(),
+				t.Recipe.GetVariables(),
 				test_data.AWSBasicRecipeVariables1AsMap,
 			)
 		})

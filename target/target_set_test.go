@@ -6,9 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/target"
-	"github.com/mevansam/gocloud/provider"
 
 	"github.com/mevansam/goforms/forms"
 	"github.com/mevansam/goutils/utils"
@@ -71,14 +69,14 @@ var _ = Describe("TargetSet", func() {
 			Expect(tgt1).ToNot(BeNil())
 			Expect(tgt1.RecipeName).To(Equal("basic"))
 			Expect(tgt1.RecipeIaas).To(Equal("aws"))
-			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider.(provider.CloudProvider))
+			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider)
 
 			tgtDeps := tgt1.Dependencies()
 			Expect(len(tgtDeps)).To(Equal(1))
 			Expect(tgtDeps[0].Key()).To(Equal("basic/aws/cc/appbrickscookbook"))
 
 			test_data.ValidatePersistedVariables(
-				tgt1.Recipe.(cookbook.Recipe).GetVariables(),
+				tgt1.Recipe.GetVariables(),
 				test_data.AWSBasicRecipeVariables1AsMap,
 			)
 
@@ -86,10 +84,10 @@ var _ = Describe("TargetSet", func() {
 			Expect(tgt2).ToNot(BeNil())
 			Expect(tgt2.RecipeName).To(Equal("basic"))
 			Expect(tgt2.RecipeIaas).To(Equal("aws"))
-			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider.(provider.CloudProvider))
+			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider)
 
 			test_data.ValidatePersistedVariables(
-				tgt2.Recipe.(cookbook.Recipe).GetVariables(),
+				tgt2.Recipe.GetVariables(),
 				test_data.AWSBasicRecipeVariables2AsMap,
 			)
 		})
