@@ -92,20 +92,20 @@ var _ = Describe("Config Context", func() {
 			Expect(tgt1).ToNot(BeNil())
 			Expect(tgt1.RecipeName).To(Equal("basic"))
 			Expect(tgt1.RecipeIaas).To(Equal("aws"))
-			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider.(provider.CloudProvider))
+			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider)
 
 			test_data.ValidatePersistedVariables(
-				tgt1.Recipe.(cookbook.Recipe).GetVariables(),
+				tgt1.Recipe.GetVariables(),
 				test_data.AWSBasicRecipeVariables1AsMap,
 			)
 
 			Expect(tgt2).ToNot(BeNil())
 			Expect(tgt2.RecipeName).To(Equal("basic"))
 			Expect(tgt2.RecipeIaas).To(Equal("aws"))
-			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider.(provider.CloudProvider))
+			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider)
 
 			test_data.ValidatePersistedVariables(
-				tgt2.Recipe.(cookbook.Recipe).GetVariables(),
+				tgt2.Recipe.GetVariables(),
 				test_data.AWSBasicRecipeVariables2AsMap,
 			)
 		})
