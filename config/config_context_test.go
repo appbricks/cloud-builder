@@ -308,7 +308,9 @@ const configDocument = `
 					"variables": ` + test_data.AWSBasicRecipeVariables1 + `
 				},
 				"provider": ` + cloud_test_data.AWSProviderConfig + `,
-				"backend": ` + cloud_test_data.S3BackendConfig + `
+				"backend": ` + cloud_test_data.S3BackendConfig + `,
+				"rsaPrivateKey": "Priv11",
+				"rsaPublicKey": "Pub11"
 			},
 			{
 				"recipeName": "basic",
@@ -318,7 +320,9 @@ const configDocument = `
 					"variables": ` + test_data.AWSBasicRecipeVariables2 + `
 				},
 				"provider": ` + cloud_test_data.AWSProviderConfig + `,
-				"backend": ` + cloud_test_data.S3BackendConfig + `
+				"backend": ` + cloud_test_data.S3BackendConfig + `,
+				"rsaPrivateKey": "Priv22",
+				"rsaPublicKey": "Pub22"
 			}
 		]
 	}

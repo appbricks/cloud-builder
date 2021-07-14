@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/appbricks/cloud-builder/cookbook"
+	"github.com/appbricks/cloud-builder/crypto"
 	"github.com/appbricks/cloud-builder/terraform"
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/cloud"
@@ -47,11 +48,17 @@ type Target struct {
 	Provider provider.CloudProvider `json:"provider,omitempty"`
 	Backend  backend.CloudBackend   `json:"backend,omitempty"`
 
-	dependencies []*Target
-
 	Output *map[string]terraform.Output `json:"output,omitempty"`
 
 	CookbookTimestamp string `json:"cookbook_timestamp,omitempty"`
+
+	RSAPrivateKey string `json:"rsaPrivateKey,omitempty"`
+	RSAPublicKey  string `json:"rsaPublicKey,omitempty"`
+
+	SpaceKey string `json:"spaceKey,omitempty"`
+	SpaceID  string `json:"spaceID,omitempty"`
+
+	dependencies []*Target
 
 	description string
 	version     string
@@ -102,6 +109,19 @@ func NewTarget(
 
 		dependencies: []*Target{},
 	}
+}
+
+func (t *Target) UpdateKeys() (*Target, error) {
+
+	var (
+		err error
+	)
+
+	// create new target key pair
+	if t.RSAPrivateKey, t.RSAPublicKey, err = crypto.CreateRSAKeyPair(); err != nil {
+		return nil, err
+	}	
+	return t, nil
 }
 
 // load target cloud references
@@ -479,11 +499,18 @@ func (t *Target) Copy() (*Target, error) {
 		Provider: providerCopy.(provider.CloudProvider),
 		Backend:  backendCopy.(backend.CloudBackend),
 
-		dependencies: t.dependencies,
-
 		Output: t.Output,
 
 		CookbookTimestamp: t.CookbookTimestamp,
+
+		RSAPrivateKey: t.RSAPrivateKey,
+		RSAPublicKey: t.RSAPublicKey,
+
+		SpaceKey: t.SpaceKey,
+		SpaceID: t.SpaceID,
+
+		dependencies: t.dependencies,
+
 	}, nil
 }
 

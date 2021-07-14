@@ -33,6 +33,12 @@ type parsedTarget struct {
 	Output *map[string]terraform.Output `json:"output,omitempty"`
 
 	CookbookTimestamp string `json:"cookbook_timestamp"`
+
+	RSAPrivateKey string `json:"rsaPrivateKey,omitempty"`
+	RSAPublicKey  string `json:"rsaPublicKey,omitempty"`
+
+	SpaceKey string `json:"spaceKey,omitempty"`
+	SpaceID  string `json:"spaceID,omitempty"`
 }
 
 // interface definition of global config context
@@ -185,6 +191,10 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		target.DependentTargets = parsedTarget.DependentTargets
 		target.Output = parsedTarget.Output
 		target.CookbookTimestamp = parsedTarget.CookbookTimestamp
+		target.RSAPrivateKey = parsedTarget.RSAPrivateKey
+		target.RSAPublicKey = parsedTarget.RSAPublicKey
+		target.SpaceKey = parsedTarget.SpaceKey
+		target.SpaceID = parsedTarget.SpaceID
 
 		if len(target.DependentTargets) > 0 {
 			targetsWithDependencies = append(targetsWithDependencies, target)

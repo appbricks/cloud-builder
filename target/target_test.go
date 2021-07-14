@@ -54,7 +54,7 @@ var _ = Describe("Target", func() {
 		b, err = backend.NewCloudBackend("s3")
 		Expect(err).NotTo(HaveOccurred())
 
-		t, err = target.NewTarget(r, p, b)
+		t, err = target.NewTarget(r, p, b).UpdateKeys()
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -81,6 +81,9 @@ var _ = Describe("Target", func() {
 			err = form.SetFieldValue("key", "s3objectkey")
 			Expect(err).NotTo(HaveOccurred())
 
+			t.SpaceKey = "abcd"
+			t.SpaceID = "1234"
+
 			encoder := json.NewEncoder(&outputBuffer)
 			err := encoder.Encode(t)
 			Expect(err).NotTo(HaveOccurred())
@@ -98,7 +101,7 @@ var _ = Describe("Target", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			expected := make(map[string]interface{})
-			err = json.Unmarshal([]byte(expectedTargetConfig), &expected)
+			err = json.Unmarshal([]byte(fmt.Sprintf(expectedTargetConfig, t.RSAPrivateKey, t.RSAPublicKey)), &expected)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(actual).To(Equal(expected))
@@ -167,7 +170,11 @@ const expectedTargetConfig = `{
   "backend": {
 		"bucket": "s3bucket",
 		"key": "s3objectkey"
-	}
+	},
+	"rsaPrivateKey": %q,
+	"rsaPublicKey": %q,
+	"spaceKey": "abcd",
+	"spaceID": "1234"
 }`
 
 const testTargetConfig = `{
