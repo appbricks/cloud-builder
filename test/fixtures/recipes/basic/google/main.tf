@@ -3,7 +3,7 @@
 #
 
 variable "test_input" {
-  type        = "string"
+  type        = string
   description = "Basic test content to write to file"
 }
 

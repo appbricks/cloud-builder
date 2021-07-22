@@ -3,12 +3,12 @@
 #
 
 variable "test_simple_input_1" {
-  type        = "string"
+  type        = string
   description = "Simple test content to write to file 1"
 }
 
 variable "test_simple_input_2" {
-  type        = "string"
+  type        = string
   description = "Simple test content to write to file 2"
 }
 
