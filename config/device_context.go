@@ -74,7 +74,7 @@ func (dc *deviceContext) UpdateDeviceKeys() (*userspace.Device, error) {
 	)
 
 	// create new device key pair
-	if dc.Device.RSAPrivateKey, dc.Device.RSAPublicKey, err = crypto.CreateRSAKeyPair(); err != nil {
+	if dc.Device.RSAPrivateKey, dc.Device.RSAPublicKey, err = crypto.CreateRSAKeyPair(nil); err != nil {
 		return nil, err
 	}	
 	return dc.Device, nil

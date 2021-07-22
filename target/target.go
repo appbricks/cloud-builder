@@ -118,7 +118,7 @@ func (t *Target) UpdateKeys() (*Target, error) {
 	)
 
 	// create new target key pair
-	if t.RSAPrivateKey, t.RSAPublicKey, err = crypto.CreateRSAKeyPair(); err != nil {
+	if t.RSAPrivateKey, t.RSAPublicKey, err = crypto.CreateRSAKeyPair(nil); err != nil {
 		return nil, err
 	}	
 	return t, nil

@@ -58,7 +58,7 @@ var _ = Describe("Device Context", func() {
 
 		device, err := deviceContext.NewDevice()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(strings.HasPrefix(device.RSAPrivateKey, "-----BEGIN PRIVATE KEY-----\n")).To(BeTrue())
+		Expect(strings.HasPrefix(device.RSAPrivateKey, "-----BEGIN RSA PRIVATE KEY-----\n")).To(BeTrue())
 		Expect(strings.HasPrefix(device.RSAPublicKey, "-----BEGIN PUBLIC KEY-----\n")).To(BeTrue())
 		deviceContext.SetDeviceID("zyxw", "1234", "New Test Device")
 		Expect(deviceContext.GetDeviceIDKey()).To(Equal("zyxw"))
