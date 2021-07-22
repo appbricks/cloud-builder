@@ -13,11 +13,11 @@ import (
 	"strings"
 
 	"github.com/appbricks/cloud-builder/cookbook"
-	"github.com/appbricks/cloud-builder/crypto"
 	"github.com/appbricks/cloud-builder/terraform"
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/cloud"
 	"github.com/mevansam/gocloud/provider"
+	"github.com/mevansam/goutils/crypto"
 	"github.com/mevansam/goutils/logger"
 
 	"github.com/mevansam/goforms/config"

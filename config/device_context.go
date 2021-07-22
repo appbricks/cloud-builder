@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/appbricks/cloud-builder/crypto"
 	"github.com/appbricks/cloud-builder/userspace"
+	"github.com/mevansam/goutils/crypto"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
