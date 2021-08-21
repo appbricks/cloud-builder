@@ -1,6 +1,7 @@
 package target
 
 import (
+	pcontext "context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -19,6 +20,7 @@ import (
 	"github.com/mevansam/gocloud/provider"
 	"github.com/mevansam/goutils/crypto"
 	"github.com/mevansam/goutils/logger"
+	"github.com/mevansam/goutils/rest"
 
 	"github.com/mevansam/goforms/config"
 )
@@ -626,6 +628,21 @@ func (i *ManagedInstance) NonRootUser() string {
 
 func (i *ManagedInstance) NonRootPassword() string {
 	return i.nonRootPasswd
+}
+
+func (i *ManagedInstance) RestApiClient(ctx pcontext.Context) (*rest.RestApiClient, error) {
+
+	var (
+		err error
+
+		httpClient *http.Client
+		url        string
+	)
+
+	if httpClient, url, err = i.HttpsClient(); err != nil {
+		return nil, err
+	}
+	return rest.NewRestApiClient(ctx, url).WithHttpClient(httpClient), nil
 }
 
 func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
