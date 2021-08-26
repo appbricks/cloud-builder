@@ -669,15 +669,15 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 	
 		client = &http.Client{
 			Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-							RootCAs: caCertPool,
-					},
+				TLSClientConfig: &tls.Config{
+					RootCAs: caCertPool,
+				},
 			},
 		}
 	} else {
 		client = &http.Client{
 			Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{},
+				TLSClientConfig: &tls.Config{},
 			},
 		}
 	}
