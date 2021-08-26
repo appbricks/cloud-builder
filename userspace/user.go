@@ -10,5 +10,10 @@ type User struct {
 	WGPrivateKey string `json:"wgPrivateKey,omitempty"`
 	WGPublickKey string `json:"wgPublickKey,omitempty"`
 
+	// active devices for this users
+	Devices []*Device `json:"devices,omitempty"`
+
+	// indicates if user is active 
+	// for the device in context
 	Active bool `json:"active"`
 }
