@@ -59,7 +59,7 @@ func NewRunner(
 	runner := &Runner{
 		cli: cli,
 
-		configPath:   configPath,
+		configPath:   fmt.Sprintf("-chdir=%s", configPath),
 		pluginPath:   pluginPath,
 		configInputs: configInputs,
 
@@ -92,12 +92,11 @@ func (r *Runner) SetBackend(
 
 func (r *Runner) Init() error {
 
-	argList := []string{"init"}
+	argList := []string{r.configPath ,"init"}
 	if len(r.pluginPath) > 0 {
 		argList = append(argList, fmt.Sprintf("-plugin-dir=%s", r.pluginPath))
 	}
 	argList = append(argList, r.backEnd...)
-	argList = append(argList, r.configPath)
 
 	return r.cli.RunWithEnv(argList, r.env)
 }
@@ -111,17 +110,18 @@ func (r *Runner) Plan(
 		argList []string
 	)
 
+	planPath := filepath.Join(r.cli.WorkingDirectory(), tfPlanFileName)
 	if argList, err = r.prepareArgList(
 		args,
 		[]string{
+			r.configPath,
 			"plan",
 			"-input=false",
 			fmt.Sprintf(
 				"-out=%s",
-				tfPlanFileName,
+				planPath,
 			),
 		},
-		r.configPath,
 	); err != nil {
 		return err
 	}
@@ -156,8 +156,9 @@ func (r *Runner) Apply(
 
 	if err = r.cli.RunWithEnv(
 		[]string{
+			r.configPath,
 			"apply",
-			tfPlanFileName,
+			planPath,
 		},
 		r.env,
 	); err != nil {
@@ -169,7 +170,6 @@ func (r *Runner) Apply(
 func (r *Runner) prepareArgList(
 	args map[string]string,
 	argList []string,
-	configPath string,
 ) ([]string, error) {
 
 	var (
@@ -211,7 +211,6 @@ func (r *Runner) prepareArgList(
 				strings.Join(missing, ","),
 			)
 	}
-	argList = append(argList, configPath)
 	return argList, nil
 }
 

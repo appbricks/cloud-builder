@@ -49,16 +49,16 @@ var _ = Describe("Runner", func() {
 				testRecipePath,
 				testPluginPath,
 				map[string]terraform.Input{
-					"test_input": terraform.Input{false},
+					"test_input": {false},
 				})
 
 			planRequestKey = cli.AddFakeResponse(
 				[]string{
+					"-chdir=" + testRecipePath,
 					"plan",
 					"-input=false",
-					"-out=tf.plan",
+					"-out=/goutils/test/cli/workingdirectory/tf.plan",
 					"-var", "test_input=arg value 1",
-					testRecipePath,
 				},
 				[]string{
 					"envvar1=envvar value 1",
@@ -71,8 +71,9 @@ var _ = Describe("Runner", func() {
 
 			applyRequestKey = cli.AddFakeResponse(
 				[]string{
+					"-chdir=" + testRecipePath,
 					"apply",
-					"tf.plan",
+					"/goutils/test/cli/workingdirectory/tf.plan",
 				},
 				[]string{
 					"envvar1=envvar value 1",
@@ -115,10 +116,10 @@ var _ = Describe("Runner", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"init",
 						"-plugin-dir=" + testPluginPath,
 						"-backend-config=endpoint=http://backend",
-						testRecipePath,
 					},
 					[]string{
 						"envvar1=envvar value 1",
@@ -149,9 +150,9 @@ var _ = Describe("Runner", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"init",
 						"-plugin-dir=" + testPluginPath,
-						testRecipePath,
 					},
 					[]string{
 						"envvar1=envvar value 1",
@@ -283,8 +284,9 @@ var _ = Describe("Runner", func() {
 				cli.ExpectFakeRequest(planRequestKey)
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"apply",
-						"tf.plan",
+						"/goutils/test/cli/workingdirectory/tf.plan",
 					},
 					[]string{
 						"envvar1=envvar value 1",
@@ -430,11 +432,11 @@ var _ = Describe("Runner", func() {
 				testRecipePath,
 				testPluginPath,
 				map[string]terraform.Input{
-					"test_input_1": terraform.Input{false},
-					"test_input_2": terraform.Input{false},
-					"test_input_3": terraform.Input{true},
-					"test_input_5": terraform.Input{false},
-					"test_input_7": terraform.Input{true},
+					"test_input_1": {false},
+					"test_input_2": {false},
+					"test_input_3": {true},
+					"test_input_5": {false},
+					"test_input_7": {true},
 				})
 		})
 
@@ -444,15 +446,15 @@ var _ = Describe("Runner", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"plan",
 						"-input=false",
-						"-out=tf.plan",
+						"-out=/goutils/test/cli/workingdirectory/tf.plan",
 						"-var", "test_input_1=abcd1",
 						"-var", "test_input_2=abcd2",
 						"-var", "test_input_3=abcd3",
 						"-var", "test_input_5=abcd5",
 						"-var", "test_input_7=abcd7",
-						testRecipePath,
 					},
 					[]string{},
 					"",
@@ -461,8 +463,9 @@ var _ = Describe("Runner", func() {
 				))
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"apply",
-						"tf.plan",
+						"/goutils/test/cli/workingdirectory/tf.plan",
 					},
 					[]string{},
 					"",

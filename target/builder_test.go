@@ -146,11 +146,11 @@ var _ = Describe("Builder", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"init",
 						"-plugin-dir=/fake/providerpath",
 						"-backend-config=endpoint=http://backend",
 						"-backend-config=user=admin",
-						testRecipePath,
 					},
 					[]string{
 						"TF_VAR_test_input_3=arg value 3",
@@ -171,13 +171,13 @@ var _ = Describe("Builder", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"plan",
 						"-input=false",
-						"-out=tf.plan",
+						"-out=/goutils/test/cli/workingdirectory/tf.plan",
 						"-var", "test_input_1=arg value 1",
 						"-var", "test_input_2=arg value 2",
 						"-var", "test_input_4=arg value 4",
-						testRecipePath,
 					},
 					[]string{
 						"TF_VAR_test_input_3=arg value 3",
@@ -246,13 +246,13 @@ var _ = Describe("Builder", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"plan",
 						"-input=false",
-						"-out=tf.plan",
+						"-out=/goutils/test/cli/workingdirectory/tf.plan",
 						"-var", "test_input_1=arg value 1",
 						"-var", "test_input_2=arg value 2",
 						"-var", "test_input_4=arg value 4",
-						testRecipePath,
 					},
 					[]string{
 						"TF_VAR_test_input_3=arg value 3",
@@ -266,8 +266,9 @@ var _ = Describe("Builder", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
+						"-chdir=" + testRecipePath,
 						"apply",
-						"tf.plan",
+						"/goutils/test/cli/workingdirectory/tf.plan",
 					},
 					[]string{
 						"TF_VAR_test_input_3=arg value 3",
