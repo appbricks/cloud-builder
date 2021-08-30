@@ -548,6 +548,10 @@ func (t *Target) NewBuilder(
 ) (*Builder, error) {
 
 	additonalInputs := make(map[string]string)
+	if t.Recipe.IsBastion() {
+		additonalInputs["mycs_node_private_key"] = t.RSAPrivateKey
+		additonalInputs["mycs_node_id_key"] = t.SpaceKey
+	}
 	for _, dt := range t.dependencies {
 		for name, output := range *dt.Output {
 			if name != "cb_managed_instances" {
