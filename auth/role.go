@@ -1,5 +1,7 @@
 package auth
 
+import "github.com/appbricks/cloud-builder/config"
+
 // User Role
 type Role uint
 const (
@@ -38,4 +40,15 @@ func (m RoleMask) HasOnlyRole(r Role) bool {
 func (m RoleMask) HasRole(r Role) bool {
 	rm := uint(1) << r
 	return (uint(m) & rm == rm)
+}
+
+// check if user logged into device is 
+// authorized using the give mask
+func (m RoleMask) LoggedInUserHasRole(deviceContext config.DeviceContext) bool {
+
+	ownerUserID, isOwnerConfigured := deviceContext.GetOwnerUserID()
+	if isOwnerConfigured && ownerUserID == deviceContext.GetLoggedInUserID() {
+		return m.HasRole(Admin)
+	}
+	return m.HasRole(Guest)
 }
