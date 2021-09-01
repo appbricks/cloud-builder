@@ -652,8 +652,11 @@ func (i *ManagedInstance) RestApiClient(ctx pcontext.Context) (*rest.RestApiClie
 func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 
 	var (
-		client *http.Client
-		host   string		
+		err error
+
+		certPool *x509.CertPool
+		client   *http.Client
+		host     string		
 	)
 
 	endpoint := i.fqdn
@@ -668,13 +671,15 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 	}
 
 	if len(i.rootCACert) > 0 {
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM([]byte(i.rootCACert))
+		if certPool, err = x509.SystemCertPool(); err != nil {
+			return nil, "", err
+		}
+		certPool.AppendCertsFromPEM([]byte(i.rootCACert))
 	
 		client = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					RootCAs: caCertPool,
+					RootCAs: certPool,
 				},
 			},
 		}
