@@ -584,6 +584,96 @@ func (t *Target) NewBuilder(
 		errorBuffer)
 }
 
+// Target type's SpaceNode implementation
+
+func (t *Target) GetSpaceID() string {
+	return t.SpaceID
+}
+
+func (t *Target) GetSpaceName() string {
+	return t.DeploymentName()
+}
+
+func (t *Target) GetPublicKey() string {
+	return t.RSAPublicKey
+}
+
+func (t *Target) GetRecipe() string {
+	return t.RecipeName
+}
+
+func (t *Target) GetIaaS() string {
+	return t.RecipeIaas
+}
+
+func (t *Target) GetRegion() string {
+	return *t.Provider.Region()
+}
+
+func (t *Target) GetVersion() string {
+	return t.Version()
+}
+
+func (t *Target) GetStatus() string {
+	return []string{
+		"undeployed",
+		"running", 
+		"shutdown",
+		"pending",
+		"unknown",
+	}[t.Status()]
+}
+
+func (t *Target) GetLastSeen() uint64 {
+	return 0
+}
+
+func (t *Target) IsRunning() bool {
+
+	var (
+		err error
+
+		instance      *ManagedInstance
+		instanceState cloud.InstanceState
+	)
+
+	if t.Status() == Running {
+		if instance = t.ManagedInstance("bastion"); instance == nil {
+			logger.DebugMessage("Target.isRunning(): Target does not have a managed bastion instance.")
+			return false			
+		}
+		if instanceState, err = instance.Instance.State(); err != nil {
+			logger.DebugMessage("Target.isRunning(): ERROR! %s", err.Error())
+			return false
+		}
+		return instanceState == cloud.StateRunning
+	}
+	return false
+}
+
+func (t *Target) HasAdminAccess() bool {
+	return true
+}
+
+func (t *Target) RestApiClient(ctx pcontext.Context) (*rest.RestApiClient, error) {
+
+	var (
+		err error
+
+		instance   *ManagedInstance
+		httpClient *http.Client
+		url        string
+	)
+
+	if instance = t.ManagedInstance("bastion"); instance == nil {
+		return nil, fmt.Errorf("target does not have a managed bastion instance")
+	}
+	if httpClient, url, err = instance.HttpsClient(); err != nil {
+		return nil, err
+	}
+	return rest.NewRestApiClient(ctx, url).WithHttpClient(httpClient), nil
+}
+
 // managedInstance functions
 
 func (i *ManagedInstance) Name() string {
@@ -632,21 +722,6 @@ func (i *ManagedInstance) NonRootUser() string {
 
 func (i *ManagedInstance) NonRootPassword() string {
 	return i.nonRootPasswd
-}
-
-func (i *ManagedInstance) RestApiClient(ctx pcontext.Context) (*rest.RestApiClient, error) {
-
-	var (
-		err error
-
-		httpClient *http.Client
-		url        string
-	)
-
-	if httpClient, url, err = i.HttpsClient(); err != nil {
-		return nil, err
-	}
-	return rest.NewRestApiClient(ctx, url).WithHttpClient(httpClient), nil
 }
 
 func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
