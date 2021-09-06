@@ -10,8 +10,10 @@ var _ = Describe("Authenticator", func() {
 
 	It("Creates roles", func() {
 		Expect(auth.Admin.String()).To(Equal("admin"))
+		Expect(auth.Manager.String()).To(Equal("manager"))
 		Expect(auth.Guest.String()).To(Equal("guest"))
 		Expect(auth.NewRoleFromString("admin")).To(Equal(auth.Admin))
+		Expect(auth.NewRoleFromString("manager")).To(Equal(auth.Manager))
 		Expect(auth.NewRoleFromString("guest")).To(Equal(auth.Guest))
 	})
 

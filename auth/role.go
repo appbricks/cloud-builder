@@ -5,9 +5,15 @@ import "github.com/appbricks/cloud-builder/config"
 // User Role
 type Role uint
 const (
+	// grants admin access both at 
+	// local/device and remote/space
 	Admin Role = iota
+	// grants access to remote 
+	// management space functions
+	Manager
+	// guest access
 	Guest
-) 
+)
 // Space user role mask
 type RoleMask uint
 
@@ -15,13 +21,19 @@ func NewRoleFromString(r string) Role {
 	switch r {
 	case "admin":
 		return Admin
+	case "manager":
+		return Manager
 	default:
 		return Guest
 	}
 }
 
 func (r Role) String() string {
-	return []string{"admin", "guest"}[r]
+	return []string{
+		"admin", 
+		"manager", 
+		"guest",
+	}[r]
 }
 
 func NewRoleMask(roles... Role) RoleMask {
