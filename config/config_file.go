@@ -39,7 +39,7 @@ type configFile struct {
 
 	authContext   AuthContext
 	deviceContext DeviceContext
-	context       Context
+	targetContext TargetContext
 }
 
 // initializes file based configuration
@@ -80,7 +80,7 @@ func InitFileConfig(
 	config.deviceContext = NewDeviceContext()
 
 	// initialize cookbook configuration context
-	if config.context, err = NewConfigContext(cookbook); err != nil {
+	if config.targetContext, err = NewConfigContext(cookbook); err != nil {
 		return nil, err
 	}
 
@@ -178,7 +178,7 @@ func (cf *configFile) Reset() error {
 	if err = cf.deviceContext.Reset(); err != nil {
 		return err
 	}
-	if err = cf.context.Reset(); err != nil {
+	if err = cf.targetContext.Reset(); err != nil {
 		return err
 	}
 
@@ -260,7 +260,7 @@ func (cf *configFile) Load() error {
 		return err
 	}
 	if contextReader != nil {
-		if err = cf.context.Load(contextReader); err != nil {
+		if err = cf.targetContext.Load(contextReader); err != nil {
 			return err
 		}
 	}
@@ -333,7 +333,7 @@ func (cf *configFile) Save() error {
 
 	// save config context
 	contextOutput.Reset()
-	if err = cf.context.Save(&contextOutput); err != nil {
+	if err = cf.targetContext.Save(&contextOutput); err != nil {
 		return err
 	}
 	if err = setValue("context", contextOutput.String()); err != nil {
@@ -419,8 +419,8 @@ func (cf *configFile) DeviceContext() DeviceContext {
 	return cf.deviceContext
 }
 
-func (cf *configFile) Context() Context {
-	return cf.context
+func (cf *configFile) TargetContext() TargetContext {
+	return cf.targetContext
 }
 
 func init() {

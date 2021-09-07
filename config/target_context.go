@@ -14,7 +14,7 @@ import (
 )
 
 // global configuration context
-type configContext struct {
+type targetContext struct {
 	cookbook *cookbook.Cookbook
 	targets  *target.TargetSet
 
@@ -23,13 +23,13 @@ type configContext struct {
 }
 
 // in: cookbook - the cookbook in context
-func NewConfigContext(cookbook *cookbook.Cookbook) (Context, error) {
+func NewConfigContext(cookbook *cookbook.Cookbook) (TargetContext, error) {
 
 	var (
 		err error
 	)
 
-	ctx := &configContext{
+	ctx := &targetContext{
 		cookbook: cookbook,
 	}
 
@@ -43,7 +43,7 @@ func NewConfigContext(cookbook *cookbook.Cookbook) (Context, error) {
 	return ctx, nil
 }
 
-func (cc *configContext) Reset() error {
+func (cc *targetContext) Reset() error {
 
 	var (
 		err error
@@ -60,7 +60,7 @@ func (cc *configContext) Reset() error {
 }
 
 // loads the cloud configuration from the given stream
-func (cc *configContext) Load(input io.Reader) error {
+func (cc *targetContext) Load(input io.Reader) error {
 
 	type elemType int
 
@@ -167,7 +167,7 @@ func (cc *configContext) Load(input io.Reader) error {
 }
 
 // saves the cloud configuration to the given stream
-func (cc *configContext) Save(output io.Writer) error {
+func (cc *targetContext) Save(output io.Writer) error {
 
 	var (
 		err error
@@ -266,11 +266,11 @@ func (cc *configContext) Save(output io.Writer) error {
 	return nil
 }
 
-func (cc *configContext) Cookbook() *cookbook.Cookbook {
+func (cc *targetContext) Cookbook() *cookbook.Cookbook {
 	return cc.cookbook
 }
 
-func (cc *configContext) GetCookbookRecipe(recipe, iaas string) (cookbook.Recipe, error) {
+func (cc *targetContext) GetCookbookRecipe(recipe, iaas string) (cookbook.Recipe, error) {
 
 	var (
 		err error
@@ -290,11 +290,11 @@ func (cc *configContext) GetCookbookRecipe(recipe, iaas string) (cookbook.Recipe
 	return copy.(cookbook.Recipe), nil
 }
 
-func (cc *configContext) SaveCookbookRecipe(recipe cookbook.Recipe) {
+func (cc *targetContext) SaveCookbookRecipe(recipe cookbook.Recipe) {
 	cc.cookbook.SetRecipe(recipe)
 }
 
-func (cc *configContext) CloudProviderTemplates() []provider.CloudProvider {
+func (cc *targetContext) CloudProviderTemplates() []provider.CloudProvider {
 
 	providerList := []provider.CloudProvider{}
 	for _, cp := range cc.providers {
@@ -305,7 +305,7 @@ func (cc *configContext) CloudProviderTemplates() []provider.CloudProvider {
 	return providerList
 }
 
-func (cc *configContext) GetCloudProvider(iaas string) (provider.CloudProvider, error) {
+func (cc *targetContext) GetCloudProvider(iaas string) (provider.CloudProvider, error) {
 
 	var (
 		err error
@@ -326,11 +326,11 @@ func (cc *configContext) GetCloudProvider(iaas string) (provider.CloudProvider, 
 	return copy.(provider.CloudProvider), nil
 }
 
-func (cc *configContext) SaveCloudProvider(provider provider.CloudProvider) {
+func (cc *targetContext) SaveCloudProvider(provider provider.CloudProvider) {
 	cc.providers[provider.Name()] = provider
 }
 
-func (cc *configContext) GetCloudBackend(name string) (backend.CloudBackend, error) {
+func (cc *targetContext) GetCloudBackend(name string) (backend.CloudBackend, error) {
 
 	var (
 		err error
@@ -351,11 +351,11 @@ func (cc *configContext) GetCloudBackend(name string) (backend.CloudBackend, err
 	return copy.(backend.CloudBackend), nil
 }
 
-func (cc *configContext) SaveCloudBackend(backend backend.CloudBackend) {
+func (cc *targetContext) SaveCloudBackend(backend backend.CloudBackend) {
 	cc.backends[backend.Name()] = backend
 }
 
-func (cc *configContext) NewTarget(
+func (cc *targetContext) NewTarget(
 	recipeName, recipeIaas string,
 ) (*target.Target, error) {
 
@@ -387,16 +387,16 @@ func (cc *configContext) NewTarget(
 	), nil
 }
 
-func (cc *configContext) TargetSet() *target.TargetSet {
+func (cc *targetContext) TargetSet() *target.TargetSet {
 	return cc.targets
 }
 
-func (cc *configContext) HasTarget(name string) bool {
+func (cc *targetContext) HasTarget(name string) bool {
 	tgt := cc.targets.GetTarget(name)
 	return tgt != nil
 }
 
-func (cc *configContext) GetTarget(name string) (*target.Target, error) {
+func (cc *targetContext) GetTarget(name string) (*target.Target, error) {
 
 	var (
 		tgt *target.Target
@@ -408,7 +408,7 @@ func (cc *configContext) GetTarget(name string) (*target.Target, error) {
 	return tgt.Copy()
 }
 
-func (cc *configContext) SaveTarget(key string, target *target.Target) {
+func (cc *targetContext) SaveTarget(key string, target *target.Target) {
 	if err := cc.targets.SaveTarget(key, target); err != nil {
 		logger.DebugMessage("Error saving target '%s': %s", key, err.Error())
 	}

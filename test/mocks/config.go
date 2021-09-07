@@ -7,21 +7,21 @@ import (
 )
 
 type MockConfig struct {
-	authContext config.AuthContext
+	authContext   config.AuthContext
 	deviceContext config.DeviceContext
-	context config.Context
+	targetContext config.TargetContext
 }
 
 func NewMockConfig(
 	authContext config.AuthContext,
 	deviceContext config.DeviceContext,
-	context config.Context,
+	targetContext config.TargetContext,
 ) config.Config {
 
 	return &MockConfig{
 		authContext: authContext,
 		deviceContext: deviceContext,
-		context: context,
+		targetContext: targetContext,
 	}
 }
 
@@ -69,6 +69,6 @@ func (mc *MockConfig) DeviceContext() config.DeviceContext {
 	return mc.deviceContext
 }
 
-func (mc *MockConfig) Context() config.Context {
-	return mc.context
+func (mc *MockConfig) TargetContext() config.TargetContext {
+	return mc.targetContext
 }

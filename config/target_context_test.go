@@ -21,13 +21,13 @@ import (
 	cloud_test_data "github.com/mevansam/gocloud/test/data"
 )
 
-var _ = Describe("Config Context", func() {
+var _ = Describe("Target Context", func() {
 
 	var (
 		err error
 
 		// Configuration
-		ctx config.Context
+		ctx config.TargetContext
 
 		outputBuffer, errorBuffer strings.Builder
 	)

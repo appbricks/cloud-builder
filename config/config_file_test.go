@@ -220,7 +220,7 @@ func updateContextWithTestData(cfg config.Config) {
 	_, err = devCtx.NewOwnerUser("1234", "johnd")
 	Expect(err).ToNot(HaveOccurred())
 
-	ctx := cfg.Context()
+	ctx := cfg.TargetContext()
 	Expect(ctx).ToNot(BeNil())
 	cp, err = ctx.GetCloudProvider("aws")
 	Expect(err).ToNot(HaveOccurred())
@@ -256,7 +256,7 @@ func validateContextTestData(cfg config.Config) {
 	Expect(exists).To(BeTrue())
 	Expect(userName).To(Equal("johnd"))
 
-	ctx := cfg.Context()
+	ctx := cfg.TargetContext()
 	Expect(ctx).ToNot(BeNil())
 	cp, err = ctx.GetCloudProvider("aws")
 	Expect(err).NotTo(HaveOccurred())
