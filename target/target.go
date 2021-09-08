@@ -95,6 +95,24 @@ type ManagedInstance struct {
 	rootCACert string
 }
 
+// create a target key
+func CreateKey(
+	recipeName, iaasName string, 
+	keyValues ...string,
+) string {
+	
+	var (
+		key strings.Builder
+	)
+	
+	key.WriteString(recipeName)
+	key.Write([]byte{'/'})
+	key.WriteString(iaasName)
+	key.Write([]byte{'/'})
+	key.WriteString(strings.Join(keyValues, "/"))
+	return key.String()
+}
+
 func NewTarget(
 	r, p, b config.Configurable,
 ) *Target {
@@ -295,34 +313,6 @@ func (t *Target) LoadRemoteRefs() error {
 	}
 
 	return nil
-}
-
-// returns a unique identifier for
-// the target
-func (t *Target) Key() string {
-	
-	keyValues := t.Recipe.GetKeyFieldValues()
-	for _, dt := range t.dependencies {
-		keyValues = append(keyValues, "<"+dt.Key())
-	}
-	return CreateKey(t.RecipeName, t.RecipeIaas, keyValues...)
-}
-
-// create a target key
-func CreateKey(
-	recipeName, iaasName string, 
-	keyValues ...string,
-) string {
-	
-	var (
-		key strings.Builder
-	)
-	key.WriteString(recipeName)
-	key.Write([]byte{'/'})
-	key.WriteString(iaasName)
-	key.Write([]byte{'/'})
-	key.WriteString(strings.Join(keyValues, "/"))
-	return key.String()
 }
 
 func (t *Target) Name() string {
@@ -584,6 +574,15 @@ func (t *Target) NewBuilder(
 }
 
 // Target type's SpaceNode implementation
+
+func (t *Target) Key() string {
+	
+	keyValues := t.Recipe.GetKeyFieldValues()
+	for _, dt := range t.dependencies {
+		keyValues = append(keyValues, "<"+dt.Key())
+	}
+	return CreateKey(t.RecipeName, t.RecipeIaas, keyValues...)
+}
 
 func (t *Target) GetSpaceID() string {
 	return t.SpaceID
