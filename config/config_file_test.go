@@ -58,45 +58,40 @@ var _ = Describe("Config File", func() {
 				cfg config.Config
 			)
 
-			cfg = initConfigFile(cfgPath, cb, "")
-			updateContextWithTestData(cfg)
+			cfg = initConfigFile(cfgPath, cb, "", false)
+			updateContextWithTestData(cfg, false)
 
 			err = cfg.Save()
 			Expect(err).ToNot(HaveOccurred())
 
 			// Load saved configuration and validate
-			cfg = initConfigFile(cfgPath, cb, "")
-			validateContextTestData(cfg)
+			cfg = initConfigFile(cfgPath, cb, "", false)
+			validateContextTestData(cfg, false)
 		})
 	})
 
 	Context("encrypted config file", func() {
 
+		var (
+			cfg config.Config
+		)
+
+		BeforeEach(func() {
+			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase", false)
+			updateContextWithTestData(cfg, true)
+		})
+
 		It("initializes config and sets some data", func() {
-
-			var (
-				cfg config.Config
-			)
-
-			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase")
-			updateContextWithTestData(cfg)
 
 			err = cfg.Save()
 			Expect(err).ToNot(HaveOccurred())
 
 			// Load saved configuration and validate
-			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase")
-			validateContextTestData(cfg)
+			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase", true)
+			validateContextTestData(cfg, true)
 		})
 
 		It("fails to read if passphrase is incorrect", func() {
-
-			var (
-				cfg config.Config
-			)
-
-			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase")
-			updateContextWithTestData(cfg)
 
 			err = cfg.Save()
 			Expect(err).ToNot(HaveOccurred())
@@ -120,14 +115,16 @@ var _ = Describe("Config File", func() {
 
 	Context("encrypted config file with saved passphrase", func() {
 
+		var (
+			cfg config.Config
+		)
+
+		BeforeEach(func() {
+			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase", false)
+			updateContextWithTestData(cfg, true)
+		})
+		
 		It("initializes config and sets some data", func() {
-
-			var (
-				cfg config.Config
-			)
-
-			cfg = initConfigFile(cfgPath, cb, "this is a test passphrase")
-			updateContextWithTestData(cfg)
 
 			cfg.SetKeyTimeout(10 * time.Second)
 			err = cfg.Save()
@@ -146,7 +143,10 @@ var _ = Describe("Config File", func() {
 			Expect(cfg).NotTo(BeNil())
 
 			err = cfg.Load()
-			validateContextTestData(cfg)
+			Expect(err).ToNot(HaveOccurred())
+			err = cfg.SetLoggedInUser("1234", "johnd")
+			Expect(err).ToNot(HaveOccurred())
+			validateContextTestData(cfg, true)
 
 			time.Sleep(10 * time.Second)
 			getPassphraseCalled := false
@@ -164,7 +164,11 @@ var _ = Describe("Config File", func() {
 			Expect(getPassphraseCalled).To(BeTrue())
 
 			err = cfg.Load()
-			validateContextTestData(cfg)
+			Expect(err).ToNot(HaveOccurred())
+			err = cfg.SetLoggedInUser("1234", "johnd")
+			Expect(err).ToNot(HaveOccurred())
+
+			validateContextTestData(cfg, true)
 		})
 
 	})
@@ -174,6 +178,7 @@ func initConfigFile(
 	cfgPath string,
 	cb *cookbook.Cookbook,
 	passphrase string,
+	setLoggedIn bool,
 ) config.Config {
 
 	var (
@@ -194,13 +199,21 @@ func initConfigFile(
 	err = cfg.Load()
 	Expect(err).ToNot(HaveOccurred())
 
+	if setLoggedIn {
+		err = cfg.SetLoggedInUser("1234", "johnd")
+		Expect(err).ToNot(HaveOccurred())
+	}
+
 	if !cfg.HasPassphrase() && len(passphrase) > 0 {
 		cfg.SetPassphrase(passphrase)
 	}
 	return cfg
 }
 
-func updateContextWithTestData(cfg config.Config) {
+func updateContextWithTestData(
+	cfg config.Config,
+	setOwner bool,
+) {
 
 	var (
 		err error
@@ -216,9 +229,11 @@ func updateContextWithTestData(cfg config.Config) {
 		TokenType: "token type",
 	})
 
-	devCtx := cfg.DeviceContext()
-	_, err = devCtx.NewOwnerUser("1234", "johnd")
-	Expect(err).ToNot(HaveOccurred())
+	if setOwner {
+		devCtx := cfg.DeviceContext()
+		_, err = devCtx.NewOwnerUser("1234", "johnd")
+		Expect(err).ToNot(HaveOccurred())	
+	}
 
 	ctx := cfg.TargetContext()
 	Expect(ctx).ToNot(BeNil())
@@ -233,7 +248,8 @@ func updateContextWithTestData(cfg config.Config) {
 	ctx.SaveCloudProvider(cp)
 }
 
-func validateContextTestData(cfg config.Config) {
+func validateContextTestData(
+	cfg config.Config, ownerSet bool) {
 
 	var (
 		err error
@@ -248,13 +264,15 @@ func validateContextTestData(cfg config.Config) {
 	Expect(token.RefreshToken).To(Equal("refresh token"))
 	Expect(token.TokenType).To(Equal("token type"))
 
-	devCtx := cfg.DeviceContext()
-	userID, exists := devCtx.GetOwnerUserID()
-	Expect(exists).To(BeTrue())
-	Expect(userID).To(Equal("1234"))
-	userName, exists := devCtx.GetOwnerUserName()
-	Expect(exists).To(BeTrue())
-	Expect(userName).To(Equal("johnd"))
+	if ownerSet {
+		devCtx := cfg.DeviceContext()
+		userID, exists := devCtx.GetOwnerUserID()
+		Expect(exists).To(BeTrue())
+		Expect(userID).To(Equal("1234"))
+		userName, exists := devCtx.GetOwnerUserName()
+		Expect(exists).To(BeTrue())
+		Expect(userName).To(Equal("johnd"))	
+	}
 
 	ctx := cfg.TargetContext()
 	Expect(ctx).ToNot(BeNil())

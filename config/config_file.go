@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,9 +38,13 @@ type configFile struct {
 	keyTimeout int64
 	passphrase string
 
+	readCrypt *crypto.Crypt
+
 	authContext   AuthContext
 	deviceContext DeviceContext
 	targetContext TargetContext
+
+	targetContextLoaded bool
 }
 
 // initializes file based configuration
@@ -79,7 +84,7 @@ func InitFileConfig(
 	// initialize device context
 	config.deviceContext = NewDeviceContext()
 
-	// initialize cookbook configuration context
+	// initialize target context with local cookbook configuration
 	if config.targetContext, err = NewConfigContext(cookbook); err != nil {
 		return nil, err
 	}
@@ -162,6 +167,16 @@ func InitFileConfig(
 		config.passphrase = getPassphrase()
 	}
 
+	// if passphrase is set then create 
+	// crypto function instance from it
+	if len(config.passphrase) > 0 {
+		if config.readCrypt, err = crypto.NewCrypt(
+			crypto.KeyFromPassphrase(config.passphrase, config.timestamp),
+		); err != nil {
+			return nil, err
+		}	
+	}
+
 	logger.DebugMessage("Using config file: %s", config.ConfigFileUsed())
 	return config, nil
 }
@@ -196,47 +211,11 @@ func (cf *configFile) Load() error {
 	var (
 		err error
 
-		crypt         *crypto.Crypt
 		contextReader io.Reader
 	)
 
-	// if passphrase is set then create an 
-	// crypto function from it
-	if len(cf.passphrase) > 0 {
-		if crypt, err = crypto.NewCrypt(
-			crypto.KeyFromPassphrase(cf.passphrase, cf.timestamp),
-		); err != nil {
-			return err
-		}	
-	}
-
-	// get value from config file
-	var getValue = func(key string) (io.Reader, error) {
-		value := cf.Get(key)
-		if value != nil {
-			if crypt != nil {
-				var decryptedContext string
-
-				if decryptedContext, err = crypt.DecryptB64(value.(string)); err != nil {
-					return nil, err
-				}
-				logger.TraceMessage("Loading serialized value for key %s: %s", key, decryptedContext)
-				return strings.NewReader(decryptedContext), nil
-	
-			} else {
-				var encodedContext []byte
-
-				if encodedContext, err = base64.URLEncoding.DecodeString(value.(string)); err != nil {
-					return nil, err
-				}
-				return bytes.NewReader(encodedContext), nil
-			}
-		}
-		return nil, nil
-	}
-
 	// load auth context
-	if contextReader, err = getValue("authContext"); err != nil {
+	if contextReader, err = cf.getValue("authContext"); err != nil {
 		return err
 	}
 	if contextReader != nil {
@@ -246,7 +225,7 @@ func (cf *configFile) Load() error {
 	}
 
 	// load device context
-	if contextReader, err = getValue("deviceContext"); err != nil {
+	if contextReader, err = cf.getValue("deviceContext"); err != nil {
 		return err
 	}
 	if contextReader != nil {
@@ -255,12 +234,12 @@ func (cf *configFile) Load() error {
 		}
 	}
 
-	// load config context
-	if contextReader, err = getValue("context"); err != nil {
-		return err
-	}
-	if contextReader != nil {
-		if err = cf.targetContext.Load(contextReader); err != nil {
+	// load target context only for device owner is not configured. 
+	// otherwise target context will be loaded when user has logged 
+	// in and the user is confirmed as the device owner
+	_, isOwnerConfigured := cf.deviceContext.GetOwnerUserID()
+	if !isOwnerConfigured {
+		if err = cf.loadTargetContext(); err != nil {
 			return err
 		}
 	}
@@ -269,15 +248,67 @@ func (cf *configFile) Load() error {
 	return nil
 }
 
+func (cf *configFile) loadTargetContext() error {
+	var (
+		err error
+
+		contextReader io.Reader
+	)
+
+	if contextReader, err = cf.getValue("targetContext"); err != nil {
+		return err
+	}
+	if contextReader != nil {
+		if err = cf.targetContext.Load(contextReader); err != nil {
+			return err
+		}
+	}
+	cf.targetContextLoaded = true
+	return nil
+}
+
+// get encrypted value from config file
+func (cf *configFile) getValue(key string) (io.Reader, error) {
+
+	var (
+		err error
+	)
+
+	value := cf.Get(key)
+	if value != nil {
+		if cf.readCrypt != nil {
+			var decryptedContext string
+
+			if decryptedContext, err = cf.readCrypt.DecryptB64(value.(string)); err != nil {
+				return nil, err
+			}
+			logger.TraceMessage("Loading serialized value for key %s: %s", key, decryptedContext)
+			return strings.NewReader(decryptedContext), nil
+
+		} else {
+			var encodedContext []byte
+
+			if encodedContext, err = base64.URLEncoding.DecodeString(value.(string)); err != nil {
+				return nil, err
+			}
+			return bytes.NewReader(encodedContext), nil
+		}
+	}
+	return nil, nil
+}
+
 func (cf *configFile) Save() error {
 
 	var (
 		err error
 
-		crypt *crypto.Crypt
-		key   string
+		writeCrypt *crypto.Crypt
+		key        string
 
 		contextOutput strings.Builder		
+
+		valueReader io.Reader
+		value       []byte
 	)
 
 	// file mod times are in seconds so retrieve
@@ -289,7 +320,7 @@ func (cf *configFile) Save() error {
 	// if passphrase is set then create an 
 	// crypto function from it
 	if len(cf.passphrase) > 0 {
-		if crypt, err = crypto.NewCrypt(
+		if writeCrypt, err = crypto.NewCrypt(
 			crypto.KeyFromPassphrase(cf.passphrase, timestamp),
 		); err != nil {
 			return err
@@ -300,11 +331,11 @@ func (cf *configFile) Save() error {
 	var setValue = func(key string, value string) error {
 		logger.TraceMessage("Saving serialized value of key \"%s\": %s", key, value)
 	
-		if crypt != nil {
+		if writeCrypt != nil {
 			var encryptedContext string
 
 			// encrypt auth context
-			if encryptedContext, err = crypt.EncryptB64(value); err != nil {
+			if encryptedContext, err = writeCrypt.EncryptB64(value); err != nil {
 				return err
 			}
 			cf.Set(key, encryptedContext)
@@ -331,13 +362,27 @@ func (cf *configFile) Save() error {
 		return err
 	}
 
-	// save config context
-	contextOutput.Reset()
-	if err = cf.targetContext.Save(&contextOutput); err != nil {
-		return err
-	}
-	if err = setValue("context", contextOutput.String()); err != nil {
-		return err
+	// save target context
+	if cf.targetContextLoaded {
+		contextOutput.Reset()
+		if err = cf.targetContext.Save(&contextOutput); err != nil {
+			return err
+		}
+		if err = setValue("targetContext", contextOutput.String()); err != nil {
+			return err
+		}	
+	} else {
+		// re-write the existing target context 
+		// with new writer crypt instance
+		if valueReader, err = cf.getValue("targetContext"); err != nil {
+			return err
+		}
+		if value, err = ioutil.ReadAll(valueReader); err != nil {
+			return err
+		}
+		if err = setValue("targetContext", string(value)); err != nil {
+			return err
+		}	
 	}
 
 	// if the key timeout is set then save the encrypted
@@ -345,7 +390,7 @@ func (cf *configFile) Save() error {
 	// context encryption passphrase if config file is
 	// read before timeout has expired.
 	if cf.keyTimeout > 0 {
-		if crypt, err = crypto.NewCrypt(
+		if writeCrypt, err = crypto.NewCrypt(
 			crypto.KeyFromPassphrase(
 				cf.keyEncryptPassphrase,
 				timestamp,
@@ -353,7 +398,7 @@ func (cf *configFile) Save() error {
 		); err != nil {
 			return err
 		}
-		if key, err = crypt.EncryptB64(cf.passphrase); err != nil {
+		if key, err = writeCrypt.EncryptB64(cf.passphrase); err != nil {
 			return err
 		}
 		cf.Set("key", key)
@@ -421,6 +466,20 @@ func (cf *configFile) DeviceContext() DeviceContext {
 
 func (cf *configFile) TargetContext() TargetContext {
 	return cf.targetContext
+}
+
+func (cf *configFile) SetLoggedInUser(userID, userName string) error {
+
+	if !cf.targetContextLoaded {
+		ownerUserID, isOwnerConfigured := cf.deviceContext.GetOwnerUserID()
+		if isOwnerConfigured && ownerUserID == userID {
+			if err := cf.loadTargetContext(); err != nil {
+				return err
+			}
+		}
+	}
+	cf.deviceContext.SetLoggedInUser(userID, userName)
+	return nil
 }
 
 func init() {

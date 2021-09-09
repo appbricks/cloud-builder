@@ -108,7 +108,10 @@ func (mctx *FakeTargetContext) GetTarget(name string) (*target.Target, error) {
 }
 	
 func (mctx *FakeTargetContext) SaveTarget(key string, target *target.Target) {
-	mctx.targets.SaveTarget(key, target)
+	err := mctx.targets.SaveTarget(key, target)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func NewMockTarget(cli run.CLI, bastionIP string, bastionPort int, caRootPEM string) *target.Target {

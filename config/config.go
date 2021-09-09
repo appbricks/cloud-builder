@@ -32,6 +32,8 @@ type Config interface {
 	AuthContext() AuthContext
 	DeviceContext() DeviceContext
 	TargetContext() TargetContext
+
+	SetLoggedInUser(userID, userName string) error
 }
 
 // provides an interface for saving and retrieving an oauth token

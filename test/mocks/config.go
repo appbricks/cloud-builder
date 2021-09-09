@@ -72,3 +72,10 @@ func (mc *MockConfig) DeviceContext() config.DeviceContext {
 func (mc *MockConfig) TargetContext() config.TargetContext {
 	return mc.targetContext
 }
+
+func (mc *MockConfig) SetLoggedInUser(userID, userName string) error {
+	if mc.deviceContext != nil {
+		mc.deviceContext.SetLoggedInUser(userID, userName)
+	}
+	return nil
+}
