@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"text/template"
 
@@ -20,6 +21,8 @@ import (
 
 type FakeTargetContext struct {
 	recipePath string
+
+	targets *target.TargetSet
 }
 
 func NewTargetMockContext(
@@ -28,12 +31,45 @@ func NewTargetMockContext(
 
 	return &FakeTargetContext{
 		recipePath: recipePath,
+		targets: target.NewTargetSet(nil),
 	}
 }
+	
+func (mctx *FakeTargetContext) Reset() error {
+	return nil
+}
 
-func (mctx *FakeTargetContext) NewTarget(
-	recipeName, recipeIaas string,
-) (*target.Target, error) {
+func (mctx *FakeTargetContext) Load(input io.Reader) error {
+	return nil
+}
+	
+func (mctx *FakeTargetContext) Save(output io.Writer) error {
+	return nil
+}
+
+func (mctx *FakeTargetContext) Cookbook() *cookbook.Cookbook {
+	return nil
+}
+	
+func (mctx *FakeTargetContext) GetCookbookRecipe(recipe, iaas string) (cookbook.Recipe, error) {
+	return nil, nil
+}
+	
+func (mctx *FakeTargetContext) SaveCookbookRecipe(recipe cookbook.Recipe) {
+}
+
+func (mctx *FakeTargetContext) CloudProviderTemplates() []provider.CloudProvider {
+	return nil
+}
+	
+func (mctx *FakeTargetContext) GetCloudProvider(iaas string) (provider.CloudProvider, error) {
+	return nil, nil
+}
+	
+func (mctx *FakeTargetContext) SaveCloudProvider(provider provider.CloudProvider) {
+}
+
+func (mctx *FakeTargetContext) NewTarget(recipeName, recipeIaas string,) (*target.Target, error) {
 
 	var (
 		err error
@@ -56,8 +92,23 @@ func (mctx *FakeTargetContext) NewTarget(
 	if b, err = backend.NewCloudBackend(r.BackendType()); err != nil {
 		return nil, err
 	}
-
 	return target.NewTarget(r, p, b), nil
+}
+
+func (mctx *FakeTargetContext) TargetSet() *target.TargetSet {
+	return mctx.targets
+}
+	
+func (mctx *FakeTargetContext) HasTarget(name string) bool {
+	return false
+}
+	
+func (mctx *FakeTargetContext) GetTarget(name string) (*target.Target, error) {
+	return nil, nil
+}
+	
+func (mctx *FakeTargetContext) SaveTarget(key string, target *target.Target) {
+	mctx.targets.SaveTarget(key, target)
 }
 
 func NewMockTarget(cli run.CLI, bastionIP string, bastionPort int, caRootPEM string) *target.Target {
