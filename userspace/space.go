@@ -9,6 +9,9 @@ import (
 
 type SpaceNode interface {
 
+	// a key for the space node
+	Key() string
+
 	GetSpaceID() string
 	GetSpaceName() string
 	GetPublicKey() string
@@ -29,6 +32,8 @@ type SpaceNode interface {
 }
 
 type Space struct {
+	key string
+
 	SpaceID   string
 	SpaceName string
 	PublicKey string
@@ -61,6 +66,25 @@ type SpaceUser struct {
 
 	// active devices for this users
 	Devices []*Device `json:"devices,omitempty"`
+}
+
+func (s *Space) Key() string {
+
+	var (
+		key strings.Builder
+	)
+
+	if len(s.key) == 0 {
+		key.WriteString(s.Recipe)
+		key.Write([]byte{'/'})
+		key.WriteString(s.IaaS)
+		key.Write([]byte{'/'})
+		key.WriteString(s.Region)
+		key.Write([]byte{'/'})
+		key.WriteString(s.SpaceName)
+		s.key = key.String()
+	}
+	return s.key
 }
 
 func (s *Space) GetSpaceID() string {
