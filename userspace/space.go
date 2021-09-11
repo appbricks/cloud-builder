@@ -26,6 +26,7 @@ type SpaceNode interface {
 
 	IsRunning() bool
 
+	IsSpaceOwned() bool
 	HasAdminAccess() bool
 
 	RestApiClient(ctx context.Context) (*rest.RestApiClient, error)
@@ -48,6 +49,7 @@ type Space struct {
 
 	// space access for
 	// user in context
+	IsOwned      bool
 	IsAdmin      bool
 	AccessStatus string
 
@@ -130,6 +132,10 @@ func (s *Space) IsRunning() bool {
 	return s.Status == "running"
 }
 
+func (s *Space) IsSpaceOwned() bool {
+	return s.IsOwned
+}
+
 func (s *Space) HasAdminAccess() bool {
 	return s.IsAdmin
 }
@@ -139,26 +145,48 @@ func (s *Space) RestApiClient(ctx context.Context) (*rest.RestApiClient, error) 
 }
 
 // sorter to order spaces in order of recipe, cloud, region and deployment name
-type SpaceCollection []*Space
+type SpaceCollection []SpaceNode
 
 func (sc SpaceCollection) Len() int {
 	return len(sc)
 }
 
 func (sc SpaceCollection) Less(i, j int) bool {
+
+	var (
+		recipeComp, 
+		iaasComp, 
+		regionComp,
+		spaceNameComp int
+	)
 	s1 := sc[i]
 	s2 := sc[j]
 
-	return strings.Compare(s1.Recipe, s2.Recipe) == -1 ||
-		( strings.Compare(s1.Recipe, s2.Recipe) == 0 && 
-			strings.Compare(s1.IaaS, s2.IaaS) == -1 ) || 
-		( strings.Compare(s1.Recipe, s2.Recipe) == 0 && 
-			strings.Compare(s1.IaaS, s2.IaaS) == 0 && 
-			strings.Compare(s1.Region, s2.Region) == -1 ) || 
-		( strings.Compare(s1.Recipe, s2.Recipe) == 0 && 
-			strings.Compare(s1.IaaS, s2.IaaS) == 0 && 
-			strings.Compare(s1.Region, s2.Region) == 0 &&
-			strings.Compare(s1.SpaceName, s2.SpaceName) == -1 )
+	recipe1 := s1.GetRecipe()
+	recipe2 := s2.GetRecipe()
+	if recipeComp = strings.Compare(recipe1, recipe2); 
+		recipeComp == -1 {
+		return true
+	}
+	iaas1 := s1.GetIaaS()
+	iaas2 := s2.GetIaaS()
+	if iaasComp = strings.Compare(iaas1, iaas2); 
+		recipeComp == 0 && iaasComp == -1 {
+		return true
+	}
+	region1 := s1.GetRegion()
+	region2 := s2.GetRegion()
+	if regionComp = strings.Compare(region1, region2); 
+		recipeComp == 0 && iaasComp == 0 && regionComp == -1 {
+		return true
+	}
+	spaceName1 := s1.GetSpaceName()
+	spaceName2 := s2.GetSpaceName()
+	if spaceNameComp = strings.Compare(spaceName1, spaceName2); 
+		recipeComp == 0 && iaasComp == 0 && regionComp == 0 && spaceNameComp == -1 {
+		return true
+	}
+	return false
 }
 
 func (sc SpaceCollection) Swap(i, j int) {

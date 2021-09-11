@@ -613,6 +613,12 @@ func (t *Target) GetVersion() string {
 }
 
 func (t *Target) GetStatus() string {
+
+	if err := t.LoadRemoteRefs(); err != nil {
+		logger.DebugMessage("Target.GetStatus(): ERROR! Failed to load targets remote references: %s", err.Error())
+		return "unknown"
+	}
+
 	return []string{
 		"undeployed",
 		"running", 
@@ -647,6 +653,10 @@ func (t *Target) IsRunning() bool {
 		return instanceState == cloud.StateRunning
 	}
 	return false
+}
+
+func (t *Target) IsSpaceOwned() bool {
+	return true
 }
 
 func (t *Target) HasAdminAccess() bool {
