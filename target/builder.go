@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/provider"
@@ -119,8 +120,12 @@ func (b *Builder) setEnvVars(runner *terraform.Runner) error {
 	for n, v := range b.additonalInputs {
 		vars["TF_VAR_"+n] = v
 	}
-	runner.SetEnv(vars)
+	// set the terraform data directory to the cli's working 
+	// directory. otherwise it defaults to the directory where 
+	// the root template is
+	vars["TF_DATA_DIR"] = filepath.Join(b.cli.WorkingDirectory(), ".terraform")
 
+	runner.SetEnv(vars)
 	return nil
 }
 

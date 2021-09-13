@@ -153,6 +153,7 @@ var _ = Describe("Builder", func() {
 						"-backend-config=user=admin",
 					},
 					[]string{
+						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
@@ -180,6 +181,7 @@ var _ = Describe("Builder", func() {
 						"-var", "test_input_4=arg value 4",
 					},
 					[]string{
+						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
@@ -203,6 +205,7 @@ var _ = Describe("Builder", func() {
 							resource,
 						},
 						[]string{
+							"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 							"TF_VAR_test_input_3=arg value 3",
 							"envvar1=provider value 1",
 							"envvar2=provider value 2",
@@ -227,6 +230,7 @@ var _ = Describe("Builder", func() {
 							resource,
 						},
 						[]string{
+							"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 							"TF_VAR_test_input_3=arg value 3",
 							"envvar1=provider value 1",
 							"envvar2=provider value 2",
@@ -255,6 +259,7 @@ var _ = Describe("Builder", func() {
 						"-var", "test_input_4=arg value 4",
 					},
 					[]string{
+						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
@@ -271,6 +276,7 @@ var _ = Describe("Builder", func() {
 						"/goutils/test/cli/workingdirectory/tf.plan",
 					},
 					[]string{
+						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
@@ -286,6 +292,7 @@ var _ = Describe("Builder", func() {
 						"-json",
 					},
 					[]string{
+						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
@@ -319,6 +326,7 @@ var _ = Describe("Builder", func() {
 						"-auto-approve",
 					},
 					[]string{
+						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
 						"envvar1=provider value 1",
 						"envvar2=provider value 2",
