@@ -2,6 +2,10 @@ package userspace
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/mevansam/goutils/rest"
@@ -141,7 +145,50 @@ func (s *Space) HasAdminAccess() bool {
 }
 
 func (s *Space) RestApiClient(ctx context.Context) (*rest.RestApiClient, error) {
-	return nil, nil
+
+	var (
+		err error
+
+		certPool   *x509.CertPool
+		httpClient *http.Client
+		
+		host string
+		url  string
+	)
+
+	if len(s.LocalCARoot) > 0 {
+		if certPool, err = x509.SystemCertPool(); err != nil {
+			return nil, err
+		}
+		certPool.AppendCertsFromPEM([]byte(s.LocalCARoot))
+	
+		httpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: certPool,
+				},
+			},
+		}
+	} else {
+		httpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{},
+			},
+		}
+	}
+	if len(s.FQDN) > 0 {
+		host = s.FQDN
+	} else if len(s.IPAddress) > 0 {
+		host = s.IPAddress
+	} else {
+		return nil, fmt.Errorf("unable to determine the api host name for space '%s'", s.SpaceName)
+	}
+	if s.Port > 0 {
+		url = fmt.Sprintf("https://%s:%d", host, s.Port)
+	} else {
+		url = fmt.Sprintf("https://%s", host)
+	}
+	return rest.NewRestApiClient(ctx, url).WithHttpClient(httpClient), nil
 }
 
 // sorter to order spaces in order of recipe, cloud, region and deployment name
