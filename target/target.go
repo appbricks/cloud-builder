@@ -742,17 +742,6 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 		host     string		
 	)
 
-	endpoint := i.fqdn
-	if len(endpoint) == 0 {
-		endpoint = i.publicIP
-	}
-	if len(endpoint) == 0 {
-		return nil, "", fmt.Errorf(
-			"unable to determine endpoint for instance \"%s\"",
-			i.name,
-		)
-	}
-
 	if len(i.rootCACert) > 0 {
 		if certPool, err = x509.SystemCertPool(); err != nil {
 			return nil, "", err
