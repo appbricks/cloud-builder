@@ -33,6 +33,8 @@ type SpaceNode interface {
 	IsSpaceOwned() bool
 	HasAdminAccess() bool
 
+	GetApiCARoot() string
+	GetEndpoint() (string, error)
 	RestApiClient(ctx context.Context) (*rest.RestApiClient, error)
 }
 
@@ -144,6 +146,35 @@ func (s *Space) HasAdminAccess() bool {
 	return s.IsAdmin
 }
 
+func (s *Space) GetApiCARoot() string {
+	return s.LocalCARoot
+}
+
+func (s *Space) GetEndpoint() (string, error) {
+
+	var (
+		protocol string
+		host     string
+	)
+
+	if s.Port == 443 || len(s.LocalCARoot) > 0 {
+		protocol = "https"
+	} else {
+		protocol = "http"
+	}
+	if len(s.FQDN) > 0 {
+		host = s.FQDN
+	} else if len(s.IPAddress) > 0 {
+		host = s.IPAddress
+	} else {
+		return "", fmt.Errorf("unable to determine the api host name for space '%s'", s.SpaceName)
+	}
+	if s.Port == 0 || s.Port == 80 || s.Port == 443 {
+		return fmt.Sprintf("%s://%s", protocol, host), nil 
+	}
+	return fmt.Sprintf("%s://%s:%d", protocol, host, s.Port), nil
+}
+
 func (s *Space) RestApiClient(ctx context.Context) (*rest.RestApiClient, error) {
 
 	var (
@@ -152,8 +183,7 @@ func (s *Space) RestApiClient(ctx context.Context) (*rest.RestApiClient, error) 
 		certPool   *x509.CertPool
 		httpClient *http.Client
 		
-		host string
-		url  string
+	  endpoint string
 	)
 
 	if len(s.LocalCARoot) > 0 {
@@ -176,19 +206,10 @@ func (s *Space) RestApiClient(ctx context.Context) (*rest.RestApiClient, error) 
 			},
 		}
 	}
-	if len(s.FQDN) > 0 {
-		host = s.FQDN
-	} else if len(s.IPAddress) > 0 {
-		host = s.IPAddress
-	} else {
-		return nil, fmt.Errorf("unable to determine the api host name for space '%s'", s.SpaceName)
+	if endpoint, err = s.GetEndpoint(); err != nil {
+		return nil, err
 	}
-	if s.Port > 0 {
-		url = fmt.Sprintf("https://%s:%d", host, s.Port)
-	} else {
-		url = fmt.Sprintf("https://%s", host)
-	}
-	return rest.NewRestApiClient(ctx, url).WithHttpClient(httpClient), nil
+	return rest.NewRestApiClient(ctx, endpoint).WithHttpClient(httpClient), nil
 }
 
 // sorter to order spaces in order of recipe, cloud, region and deployment name

@@ -663,6 +663,21 @@ func (t *Target) HasAdminAccess() bool {
 	return true
 }
 
+func (t *Target) GetApiCARoot() string {
+	if instance := t.ManagedInstance("bastion"); instance != nil {
+		return instance.rootCACert
+	}
+	return ""
+}
+
+func (t *Target) GetEndpoint() (string, error) {
+
+	if instance := t.ManagedInstance("bastion"); instance != nil {
+		return instance.GetEndpoint()
+	}
+	return "", fmt.Errorf("unable to determine endpoint url for target bastion instance")
+}
+
 func (t *Target) RestApiClient(ctx pcontext.Context) (*rest.RestApiClient, error) {
 
 	var (
@@ -732,6 +747,33 @@ func (i *ManagedInstance) NonRootPassword() string {
 	return i.nonRootPasswd
 }
 
+func (i *ManagedInstance) GetEndpoint() (string, error) {
+
+	var (
+		protocol string
+		host     string
+	)
+
+	if i.apiPort == "443" || len(i.rootCACert) > 0 {
+		protocol = "https"
+	} else {
+		protocol = "http"
+	}
+	if len(i.fqdn) > 0 {
+		host = i.fqdn
+	} else if len(i.publicIP) > 0 {
+		host = i.publicIP
+	} else if len(i.privateIP) > 0 {
+		host = i.privateIP
+	} else {
+		return "", fmt.Errorf("unable to determine the managed instance's host name")
+	}
+	if i.apiPort == "0" || i.apiPort == "80" || i.apiPort == "443" {
+		return fmt.Sprintf("%s://%s", protocol, host), nil 
+	}
+	return fmt.Sprintf("%s://%s:%s", protocol, host, i.apiPort), nil
+}
+
 func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 
 	var (
@@ -739,7 +781,8 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 
 		certPool *x509.CertPool
 		client   *http.Client
-		host     string		
+
+		endpoint string
 	)
 
 	if len(i.rootCACert) > 0 {
@@ -762,18 +805,8 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 			},
 		}
 	}
-	if len(i.fqdn) > 0 {
-		host = i.fqdn
-	} else if len(i.publicIP) > 0 {
-		host = i.publicIP
-	} else if len(i.privateIP) > 0 {
-		host = i.privateIP
-	} else {
-		return nil, "", fmt.Errorf("unable to determine the managed instances host name")
+	if endpoint, err = i.GetEndpoint(); err != nil {
+		return nil, "", err
 	}
-	if len(i.apiPort) > 0 {
-		return client, fmt.Sprintf("https://%s:%s", host, i.apiPort), nil	
-	} else {
-		return client, fmt.Sprintf("https://%s", host), nil	
-	}
+	return client, endpoint, nil	
 }
