@@ -104,7 +104,7 @@ func (mctx *FakeTargetContext) HasTarget(name string) bool {
 }
 	
 func (mctx *FakeTargetContext) GetTarget(name string) (*target.Target, error) {
-	return nil, nil
+	return mctx.targets.GetTarget(name), nil
 }
 	
 func (mctx *FakeTargetContext) SaveTarget(key string, target *target.Target) {
