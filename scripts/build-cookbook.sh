@@ -9,7 +9,8 @@ usage () {
   echo -e "\nUSAGE: build-cookbook.sh -r|--recipe <RECIPE REPO PATH> \\"
   echo -e "    [-b|--git-branch <GIT_BRANCH_NAME>] \\"
   echo -e "    [-n|--name <RECIPE NAME>] [-i|--iaas <TARGET IAAS>] \\"
-  echo -e "    [-o|--os-name <TARGET OS>] [-s|--single] [-c|--clean]] [-v|--verbose]\n"
+  echo -e "    [-o|--os-name <TARGET OS>] [-a|--os-arch <TARGET OS ARCH>] \\"
+  echo -e "    [-s|--single] [-c|--clean]] [-v|--verbose]\n"
   echo -e "    This utility script packages the terraform recipes or distribution with the service."
   echo -e "    The Terraform recipe should exist under the given repo path within a folder having a"
   echo -e "    <recipe name>/<iaas> folder. The 'recipe', 'name' and 'iaas' options are all required"
@@ -20,7 +21,9 @@ usage () {
   echo -e "    -n|--name        <RECIPE NAME>       The name of the recipe"
   echo -e "    -i|--iaas        <TARGET IAAS>       The target IaaS of this recipe."
   echo -e "    -o|--os-name     <TARGET OS>         The target OS for which recipe providers should be download."
-  echo -e "                                         Should be of \"darwin\", \"linux\" or \"windows\"."
+  echo -e "                                         Should be one of \"darwin\", \"linux\" or \"windows\"."
+  echo -e "    -a|--os-arch     <TARGET OS ARCH>    The target OS architecture."
+  echo -e "                                         Should be one of \"386\", \"amd64\", \"arm\", \"arm64\"."
   echo -e "    -s|--single                          Only the recipe indicated shoud be added"
   echo -e "    -c|--clean                           Clean build before proceeding"
   echo -e "    -v|--verbose                         Trace shell execution"
@@ -64,6 +67,14 @@ while [[ $# -gt 0 ]]; do
       target_os=$2
       [[ -n $(echo ":darwin:linux:windows:" | grep ":$target_os:") ]] || (
         echo "ERROR! Only OS types darwin, linux or windows are supported.";
+        exit 1;
+      )
+      shift
+      ;;
+    -a|--os-arch)
+      target_arch=$2
+      [[ -n $(echo ":386:amd64:arm:arm64:" | grep ":$target_arch:") ]] || (
+        echo "ERROR! Only OS archs 386, amd64, arm or arm64 are supported.";
         exit 1;
       )
       shift
