@@ -145,11 +145,14 @@ func NewMockTarget(cli run.CLI, bastionIP string, bastionPort int, caRootPEM str
 		panic(err)
 	}
 
+	recipe := NewFakeRecipe(cli)
+	recipe.SetBastion()
+
 	return &target.Target{
 		RecipeName: "fakeRecipe",
 		RecipeIaas: "fakeIAAS",
 
-		Recipe: NewFakeRecipe(cli),
+		Recipe: recipe,
 		Provider: provider_mocks.NewFakeCloudProvider(),
 		Backend: backend_mocks.NewFakeCloudBackend(),
 
