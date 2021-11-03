@@ -78,6 +78,7 @@ type DeviceContext interface {
 	SetLoggedInUser(userID, userName string)
 	GetLoggedInUserID() string
 	GetLoggedInUserName() string
+	GetLoggedInUser() (*userspace.User, error)
 }
 
 // provides an interface for managing the configuration context

@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/appbricks/cloud-builder/userspace"
@@ -188,6 +189,21 @@ func (dc *deviceContext) GetLoggedInUserID() string {
 
 func (dc *deviceContext) GetLoggedInUserName() string {
 	return dc.userName
+}
+
+func (dc *deviceContext) GetLoggedInUser() (*userspace.User, error) {
+
+	var (
+		exists bool
+		user   *userspace.User
+	)
+
+	if dc.userID == dc.Owner.UserID {
+		user = dc.Owner
+	} else if user, exists = dc.Users[dc.userName]; !exists {
+		return nil, fmt.Errorf("logged in user \"%s\" does not exist in device context", dc.userName)
+	}
+	return user, nil
 }
 
 func newUser(userID, name string) (*userspace.User, error) {
