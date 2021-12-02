@@ -663,6 +663,10 @@ func (t *Target) HasAdminAccess() bool {
 	return true
 }
 
+func (t *Target) CanUseAsEgressNode() bool {
+	return true
+}
+
 func (t *Target) GetApiCARoot() string {
 	if instance := t.ManagedInstance("bastion"); instance != nil {
 		return instance.rootCACert

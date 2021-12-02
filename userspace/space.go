@@ -32,6 +32,7 @@ type SpaceNode interface {
 
 	IsSpaceOwned() bool
 	HasAdminAccess() bool
+	CanUseAsEgressNode() bool
 
 	GetApiCARoot() string
 	GetEndpoint() (string, error)
@@ -49,6 +50,8 @@ type Space struct {
 	IaaS    string
 	Region  string	
 	Version string
+
+	IsEgressNode bool
 
 	Status    string
 	LastSeen  uint64
@@ -144,6 +147,10 @@ func (s *Space) IsSpaceOwned() bool {
 
 func (s *Space) HasAdminAccess() bool {
 	return s.IsAdmin
+}
+
+func (s *Space) CanUseAsEgressNode() bool {
+	return s.IsEgressNode
 }
 
 func (s *Space) GetApiCARoot() string {
