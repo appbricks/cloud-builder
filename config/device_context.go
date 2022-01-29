@@ -7,7 +7,6 @@ import (
 
 	"github.com/appbricks/cloud-builder/userspace"
 	"github.com/mevansam/goutils/crypto"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 // global configuration context
@@ -208,19 +207,8 @@ func (dc *deviceContext) GetLoggedInUser() (*userspace.User, error) {
 
 func newUser(userID, name string) (*userspace.User, error) {
 
-	var (
-		err error
-
-		key wgtypes.Key
-	)
-
-	if key, err = wgtypes.GeneratePrivateKey(); err != nil {
-		return nil, err
-	}
 	return &userspace.User{
 		UserID: userID,
 		Name: name,
-		WGPrivateKey: key.String(),
-		WGPublickKey: key.PublicKey().String(),
 	}, nil
 }

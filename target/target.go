@@ -65,6 +65,7 @@ type Target struct {
 	version     string
 
 	rootCACert string
+	vpnType    string
 
 	managedInstances []*ManagedInstance
 	compute          cloud.Compute
@@ -202,6 +203,11 @@ func (t *Target) LoadRemoteRefs() error {
 		if output, ok = (*t.Output)["cb_root_ca_cert"]; ok {
 			if t.rootCACert, ok = output.Value.(string); !ok {
 				return fmt.Errorf("node root ca certificate key value is not a string")
+			}
+		}
+		if output, ok = (*t.Output)["cb_vpn_type"]; ok {
+			if t.vpnType, ok = output.Value.(string); !ok {
+				return fmt.Errorf("node root vpn type value is not a string")
 			}
 		}
 
@@ -699,6 +705,10 @@ func (t *Target) RestApiClient(ctx pcontext.Context) (*rest.RestApiClient, error
 		return nil, err
 	}
 	return rest.NewRestApiClient(ctx, url).WithHttpClient(httpClient), nil
+}
+
+func (t *Target) CreateDeviceConnectKeyPair() (string, string, error) {
+	return crypto.CreateVPNKeyPair(t.vpnType)
 }
 
 // managedInstance functions

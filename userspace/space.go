@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mevansam/goutils/crypto"
 	"github.com/mevansam/goutils/rest"
 )
 
@@ -37,6 +38,8 @@ type SpaceNode interface {
 	GetApiCARoot() string
 	GetEndpoint() (string, error)
 	RestApiClient(ctx context.Context) (*rest.RestApiClient, error)
+
+	CreateDeviceConnectKeyPair() (string, string, error)
 }
 
 type Space struct {
@@ -65,6 +68,7 @@ type Space struct {
 	IPAddress   string
 	FQDN        string
 	Port        int
+	VpnType     string
 	LocalCARoot string
 }
 
@@ -217,6 +221,10 @@ func (s *Space) RestApiClient(ctx context.Context) (*rest.RestApiClient, error) 
 		return nil, err
 	}
 	return rest.NewRestApiClient(ctx, endpoint).WithHttpClient(httpClient), nil
+}
+
+func (s *Space) CreateDeviceConnectKeyPair() (string, string, error) {
+	return crypto.CreateVPNKeyPair(s.VpnType)
 }
 
 // sorter to order spaces in order of recipe, cloud, region and deployment name

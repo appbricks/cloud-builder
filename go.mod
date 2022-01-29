@@ -20,7 +20,7 @@ require (
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/hashicorp/hcl/v2 v2.2.0
 	github.com/hashicorp/terraform v0.12.18
-	github.com/kr/pretty v0.2.0
+	github.com/kr/pretty v0.2.1
 	github.com/mevansam/gocloud v0.0.0-00010101000000-000000000000
 	github.com/mevansam/goforms v0.0.0-00010101000000-000000000000
 	github.com/mevansam/goutils v0.0.0-00010101000000-000000000000
@@ -30,7 +30,6 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/zclconf/go-cty v1.1.1
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3
-	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20210506160403-92e472f520a5
 	google.golang.org/api v0.30.0
 	google.golang.org/appengine v1.6.7 // indirect
 )
@@ -58,7 +57,7 @@ require (
 	github.com/gobuffalo/logger v1.0.1 // indirect
 	github.com/gobuffalo/packd v0.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/gookit/color v1.2.1 // indirect
@@ -104,15 +103,16 @@ require (
 	github.com/ugorji/go/codec v1.1.7 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.opencensus.io v0.22.4 // indirect
-	golang.org/x/crypto v0.0.0-20210503195802-e9a32991a82e // indirect
+	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/mod v0.3.0 // indirect
-	golang.org/x/net v0.0.0-20210504132125-bbd867fde50d // indirect
-	golang.org/x/sys v0.0.0-20210816074244-15123e1e1f71 // indirect
+	golang.org/x/mod v0.5.1 // indirect
+	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b // indirect
+	golang.org/x/sys v0.0.0-20211214234402-4825e8c3871d // indirect
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
-	golang.org/x/text v0.3.6 // indirect
-	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/tools v0.1.8 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
