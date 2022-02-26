@@ -20,6 +20,8 @@ type targetContext struct {
 
 	providers map[string]provider.CloudProvider
 	backends  map[string]backend.CloudBackend
+
+	dirty bool
 }
 
 // in: cookbook - the cookbook in context
@@ -31,6 +33,7 @@ func NewConfigContext(cookbook *cookbook.Cookbook) (TargetContext, error) {
 
 	ctx := &targetContext{
 		cookbook: cookbook,
+		dirty:    false,
 	}
 
 	if ctx.providers, err = provider.NewCloudProviderTemplates(); err != nil {
@@ -328,6 +331,7 @@ func (cc *targetContext) GetCloudProvider(iaas string) (provider.CloudProvider, 
 
 func (cc *targetContext) SaveCloudProvider(provider provider.CloudProvider) {
 	cc.providers[provider.Name()] = provider
+	cc.dirty = true
 }
 
 func (cc *targetContext) GetCloudBackend(name string) (backend.CloudBackend, error) {
@@ -353,6 +357,7 @@ func (cc *targetContext) GetCloudBackend(name string) (backend.CloudBackend, err
 
 func (cc *targetContext) SaveCloudBackend(backend backend.CloudBackend) {
 	cc.backends[backend.Name()] = backend
+	cc.dirty = true
 }
 
 func (cc *targetContext) NewTarget(
@@ -411,5 +416,16 @@ func (cc *targetContext) GetTarget(name string) (*target.Target, error) {
 func (cc *targetContext) SaveTarget(key string, target *target.Target) {
 	if err := cc.targets.SaveTarget(key, target); err != nil {
 		logger.DebugMessage("Error saving target '%s': %s", key, err.Error())
+	} else {
+		cc.dirty = true
 	}
+}
+
+func (cc *targetContext) DeleteTarget(key string) {
+	cc.targets.DeleteTarget(key)
+	cc.dirty = true
+}
+
+func (cc *targetContext) IsDirty() bool {
+	return cc.dirty
 }

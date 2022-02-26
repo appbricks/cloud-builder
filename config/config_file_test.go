@@ -101,6 +101,9 @@ var _ = Describe("Config File", func() {
 				func() string {
 					return "incorrect password"
 				},
+				func(key string, configData []byte) error {					
+					return nil
+				},
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -137,6 +140,9 @@ var _ = Describe("Config File", func() {
 					Fail("get passphrase called when it should have been retrieved from the saved key")
 					return ""
 				},
+				func(key string, configData []byte) error {					
+					return nil
+				},
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -157,7 +163,11 @@ var _ = Describe("Config File", func() {
 				func() string {
 					getPassphraseCalled = true
 					return "this is a test passphrase"
-				})
+				},
+				func(key string, configData []byte) error {					
+					return nil
+				},
+			)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cfg).NotTo(BeNil())
@@ -190,6 +200,9 @@ func initConfigFile(
 		// getPassphrase
 		func() string {
 			return passphrase
+		},
+		func(key string, configData []byte) error {					
+			return nil
 		},
 	)
 

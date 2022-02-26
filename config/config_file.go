@@ -7,11 +7,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/mevansam/goutils/crypto"
 	"github.com/mevansam/goutils/logger"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"github.com/appbricks/cloud-builder/cookbook"
@@ -20,6 +20,8 @@ import (
 type GetPassphrase func() string
 
 type GetSystemPassphrase func() string
+
+type UploadConfig func(key string, configData []byte) error
 
 // Function to retrieve a passphrase to encrypt
 // temporarily saved keys. By default this will
@@ -45,21 +47,26 @@ type configFile struct {
 	targetContext TargetContext
 
 	targetContextLoaded bool
+
+	uploadConfig UploadConfig
 }
 
 // initializes file based configuration
 //
-// in: path - the path of the config file
-// in: passphrase - callback to get the passphrase that will be
-//                  used for encrytion of sensitive information
-// in: cookbook - the embedded cookbook the config should be
-//                assciated with
+// in: path          - the path of the config file
+// in: cookbook      - the embedded cookbook the config should be
+//                     associated with
+// in: getPassphrase - callback to get the passphrase that will be
+//                     used for encrytion of sensitive information
+// in: uploadConfig  - config upload function
+//
 // out: a Config instance containing the global
 //      configuration for CloudBuilder
 func InitFileConfig(
 	path string,
 	cookbook *cookbook.Cookbook,
 	getPassphrase GetPassphrase,
+	uploadConfig UploadConfig,
 ) (Config, error) {
 
 	var (
@@ -76,6 +83,8 @@ func InitFileConfig(
 		Viper: *viper.New(),
 
 		path: path,
+
+		uploadConfig: uploadConfig,
 	}
 
 	// initialize auth context
@@ -277,13 +286,15 @@ func (cf *configFile) getValue(key string) (io.Reader, error) {
 	value := cf.Get(key)
 	if value != nil {
 		if cf.readCrypt != nil {
-			var decryptedContext string
+			var decryptedContext []byte
 
-			if decryptedContext, err = cf.readCrypt.DecryptB64(value.(string)); err != nil {
+			if decryptedContext, err = cf.readCrypt.DecryptB64Raw(value.(string)); err != nil {
 				return nil, err
 			}
-			logger.TraceMessage("Loading serialized value for key %s: %s", key, decryptedContext)
-			return strings.NewReader(decryptedContext), nil
+			if logrus.IsLevelEnabled(logrus.TraceLevel) {
+				logger.TraceMessage("Loading serialized value for key %s: %s", key, string(decryptedContext))
+			}
+			return bytes.NewReader(decryptedContext), nil
 
 		} else {
 			var encodedContext []byte
@@ -305,7 +316,7 @@ func (cf *configFile) Save() error {
 		writeCrypt *crypto.Crypt
 		key        string
 
-		contextOutput strings.Builder		
+		contextOutput bytes.Buffer
 
 		valueReader io.Reader
 		value       []byte
@@ -328,14 +339,16 @@ func (cf *configFile) Save() error {
 	}
 
 	// set value in config file 
-	var setValue = func(key string, value string) error {
-		logger.TraceMessage("Saving serialized value of key \"%s\": %s", key, value)
+	var setValue = func(key string, value []byte) error {
+		if logrus.IsLevelEnabled(logrus.TraceLevel) {
+			logger.TraceMessage("Saving serialized value of key \"%s\": %s", key, string(value))
+		}
 	
 		if writeCrypt != nil {
 			var encryptedContext string
 
 			// encrypt auth context
-			if encryptedContext, err = writeCrypt.EncryptB64(value); err != nil {
+			if encryptedContext, err = writeCrypt.EncryptB64Raw(value); err != nil {
 				return err
 			}
 			cf.Set(key, encryptedContext)
@@ -349,7 +362,7 @@ func (cf *configFile) Save() error {
 	if err = cf.authContext.Save(&contextOutput); err != nil {
 		return err
 	}
-	if err = setValue("authContext", contextOutput.String()); err != nil {
+	if err = setValue("authContext", contextOutput.Bytes()); err != nil {
 		return err
 	}
 
@@ -358,7 +371,7 @@ func (cf *configFile) Save() error {
 	if err = cf.deviceContext.Save(&contextOutput); err != nil {
 		return err
 	}
-	if err = setValue("deviceContext", contextOutput.String()); err != nil {
+	if err = setValue("deviceContext", contextOutput.Bytes()); err != nil {
 		return err
 	}
 
@@ -368,9 +381,18 @@ func (cf *configFile) Save() error {
 		if err = cf.targetContext.Save(&contextOutput); err != nil {
 			return err
 		}
-		if err = setValue("targetContext", contextOutput.String()); err != nil {
+		output := contextOutput.Bytes()
+		// save target context to local config
+		if err = setValue("targetContext", output); err != nil {
 			return err
 		}	
+		// upload target context if changed
+		if cf.targetContext.IsDirty() {
+			if err = cf.uploadConfig("targetContext", output); err != nil {
+				return err
+			}
+		}
+
 	} else {
 		// re-write the existing target context 
 		// with new writer crypt instance
@@ -380,7 +402,7 @@ func (cf *configFile) Save() error {
 		if value, err = ioutil.ReadAll(valueReader); err != nil {
 			return err
 		}
-		if err = setValue("targetContext", string(value)); err != nil {
+		if err = setValue("targetContext", value); err != nil {
 			return err
 		}	
 	}

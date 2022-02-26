@@ -143,7 +143,7 @@ func (ts *TargetSet) SaveTarget(key string, target *Target) error {
 }
 
 func (ts *TargetSet) DeleteTarget(key string) {
-	logger.TraceMessage("Saving target with key. %s", key)
+	logger.TraceMessage("Deleting target with key. %s", key)
 	delete(ts.targets, key)
 }
 

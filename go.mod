@@ -27,6 +27,7 @@ require (
 	github.com/onsi/ginkgo v1.13.0
 	github.com/onsi/gomega v1.10.1
 	github.com/otiai10/copy v1.4.2
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/viper v1.6.1
 	github.com/zclconf/go-cty v1.1.1
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3
@@ -86,7 +87,6 @@ require (
 	github.com/pelletier/go-toml v1.2.0 // indirect
 	github.com/peterh/liner v1.1.0 // indirect
 	github.com/rogpeppe/go-internal v1.4.0 // indirect
-	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect

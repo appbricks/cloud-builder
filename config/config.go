@@ -101,4 +101,7 @@ type TargetContext interface {
 	HasTarget(name string) bool
 	GetTarget(name string) (*target.Target, error)
 	SaveTarget(key string, target *target.Target)
+	DeleteTarget(key string)
+
+	IsDirty() bool
 }
