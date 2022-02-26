@@ -4,6 +4,7 @@ import (
 	"github.com/appbricks/cloud-builder/auth"
 	"github.com/appbricks/cloud-builder/config"
 	"github.com/appbricks/cloud-builder/userspace"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
