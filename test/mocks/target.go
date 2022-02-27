@@ -114,6 +114,14 @@ func (mctx *FakeTargetContext) SaveTarget(key string, target *target.Target) {
 	}
 }
 
+func (mctx *FakeTargetContext) DeleteTarget(key string) {
+	mctx.targets.DeleteTarget(key)
+}
+
+func (mctx *FakeTargetContext) IsDirty() bool {
+	return false
+}
+
 func NewMockTarget(cli run.CLI, bastionIP string, bastionPort int, caRootPEM string) *target.Target {
 
 	var (

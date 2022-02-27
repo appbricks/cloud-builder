@@ -37,6 +37,13 @@ func (mc *MockConfig) Save() error {
 	return nil
 }
 
+func (mc *MockConfig) GetConfigAsOf() int64 {
+	return 0
+}
+
+func (mc *MockConfig) SetConfigAsOf(asOf int64) {
+}
+
 func (mc *MockConfig) Initialized() bool {
 	return true
 }

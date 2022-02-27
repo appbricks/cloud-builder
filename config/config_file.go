@@ -21,7 +21,7 @@ type GetPassphrase func() string
 
 type GetSystemPassphrase func() string
 
-type UploadConfig func(key string, configData []byte) error
+type UploadConfig func(key string, configData []byte, asOf int64) (int64, error)
 
 // Function to retrieve a passphrase to encrypt
 // temporarily saved keys. By default this will
@@ -49,6 +49,7 @@ type configFile struct {
 	targetContextLoaded bool
 
 	uploadConfig UploadConfig
+	cfgAsOf      int64
 }
 
 // initializes file based configuration
@@ -223,6 +224,9 @@ func (cf *configFile) Load() error {
 		contextReader io.Reader
 	)
 
+	// read config as of timestamp
+	cf.cfgAsOf = cf.GetInt64("cfgAsOf")
+
 	// load auth context
 	if contextReader, err = cf.getValue("authContext"); err != nil {
 		return err
@@ -388,7 +392,7 @@ func (cf *configFile) Save() error {
 		}	
 		// upload target context if changed
 		if cf.targetContext.IsDirty() {
-			if err = cf.uploadConfig("targetContext", output); err != nil {
+			if cf.cfgAsOf, err = cf.uploadConfig("targetContext", output, cf.cfgAsOf); err != nil {
 				return err
 			}
 		}
@@ -430,6 +434,9 @@ func (cf *configFile) Save() error {
 	}
 	cf.Set("keyTimeout", cf.keyTimeout)
 
+	// save config as of timestamp
+	cf.Set("cfgAsOf", cf.cfgAsOf)
+
 	// save config file
 	if err = cf.WriteConfig(); err != nil {
 		return err
@@ -442,6 +449,14 @@ func (cf *configFile) Save() error {
 
 	logger.TraceMessage("Config saved to: %s (seed time %s)", cf.path, now.String())
 	return nil
+}
+
+func (cf *configFile) GetConfigAsOf() int64 {
+	return cf.cfgAsOf
+}
+
+func (cf *configFile) SetConfigAsOf(asOf int64) {
+	cf.cfgAsOf = asOf
 }
 
 func (cf *configFile) EULAAccepted() bool {

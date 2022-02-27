@@ -19,6 +19,9 @@ type Config interface {
 	Load() error
 	Save() error
 
+	GetConfigAsOf() int64
+	SetConfigAsOf(asOf int64)
+
 	EULAAccepted() bool
 	SetEULAAccepted()
 

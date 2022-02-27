@@ -101,8 +101,8 @@ var _ = Describe("Config File", func() {
 				func() string {
 					return "incorrect password"
 				},
-				func(key string, configData []byte) error {					
-					return nil
+				func(key string, configData []byte, asOf int64) (int64, error) {					
+					return 0, nil
 				},
 			)
 
@@ -140,8 +140,8 @@ var _ = Describe("Config File", func() {
 					Fail("get passphrase called when it should have been retrieved from the saved key")
 					return ""
 				},
-				func(key string, configData []byte) error {					
-					return nil
+				func(key string, configData []byte, asOf int64) (int64, error) {					
+					return 0, nil
 				},
 			)
 
@@ -164,8 +164,8 @@ var _ = Describe("Config File", func() {
 					getPassphraseCalled = true
 					return "this is a test passphrase"
 				},
-				func(key string, configData []byte) error {					
-					return nil
+				func(key string, configData []byte, asOf int64) (int64, error) {					
+					return 0, nil
 				},
 			)
 
@@ -201,8 +201,8 @@ func initConfigFile(
 		func() string {
 			return passphrase
 		},
-		func(key string, configData []byte) error {					
-			return nil
+		func(key string, configData []byte, asOf int64) (int64, error) {					
+			return 0, nil
 		},
 	)
 
