@@ -31,6 +31,7 @@ func EnsureCookbookIsBuilt(destPath string) error {
 		cleanTest := os.Getenv("CBS_CLEAN_TEST")
 		info, err = os.Stat(filepath.Join(destPath, "dist"))
 		if cleanTest == "1" || os.IsNotExist(err) || !info.IsDir() {
+			os.RemoveAll(filepath.Join(filepath.Dir(destPath), "build"))
 
 			err = buildCookbookFixture(
 				destPath,
