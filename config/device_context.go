@@ -58,7 +58,7 @@ func (dc *deviceContext) Load(input io.Reader) error {
 }
 
 func (dc *deviceContext) Save(output io.Writer) error {
-	if dc.userID != dc.Owner.UserID {
+	if dc.Owner != nil && dc.userID != dc.Owner.UserID {
 		// ensure owner's private key is rest 
 		// if logged in user is different
 		dc.Owner.RSAPrivateKey = ""
