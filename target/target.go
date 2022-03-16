@@ -801,7 +801,11 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 
 	if len(i.rootCACert) > 0 {
 		if certPool, err = x509.SystemCertPool(); err != nil {
-			return nil, "", err
+			logger.DebugMessage(
+				"ManagedInstance.HttpsClient(): Using new empty cert pool due to error retrieving system cert pool.: %s", 
+				err.Error(),
+			)
+			certPool = x509.NewCertPool()
 		}
 		certPool.AppendCertsFromPEM([]byte(i.rootCACert))
 	

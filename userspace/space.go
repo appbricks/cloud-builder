@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/mevansam/goutils/crypto"
+	"github.com/mevansam/goutils/logger"
 	"github.com/mevansam/goutils/rest"
 )
 
@@ -199,7 +200,11 @@ func (s *Space) RestApiClient(ctx context.Context) (*rest.RestApiClient, error) 
 
 	if len(s.LocalCARoot) > 0 {
 		if certPool, err = x509.SystemCertPool(); err != nil {
-			return nil, err
+			logger.DebugMessage(
+				"Space.RestApiClient(): Using new empty cert pool due to error retrieving system cert pool.: %s", 
+				err.Error(),
+			)
+			certPool = x509.NewCertPool()
 		}
 		certPool.AppendCertsFromPEM([]byte(s.LocalCARoot))
 	
