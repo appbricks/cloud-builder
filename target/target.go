@@ -730,8 +730,13 @@ func (i *ManagedInstance) FQDN() string {
 }
 
 func (i *ManagedInstance) SSHAddress() string {
-	if len(i.publicIP) > 0 {
-		return fmt.Sprintf("%s:%s", i.publicIP, i.sshPort)
+	
+	publicIP := i.Instance.PublicIP()
+	if len(publicIP) == 0 {
+		publicIP = i.publicIP
+	}
+	if len(publicIP) > 0 {
+		return fmt.Sprintf("%s:%s", publicIP, i.sshPort)
 	} else {
 		return fmt.Sprintf("%s:%s", i.privateIP, i.sshPort)
 	}
@@ -764,8 +769,9 @@ func (i *ManagedInstance) NonRootPassword() string {
 func (i *ManagedInstance) GetEndpoint() (string, error) {
 
 	var (
-		protocol string
-		host     string
+		protocol,
+		host,
+		endpoint string
 	)
 
 	if i.apiPort == "443" || len(i.rootCACert) > 0 {
@@ -773,19 +779,28 @@ func (i *ManagedInstance) GetEndpoint() (string, error) {
 	} else {
 		protocol = "http"
 	}
-	if len(i.fqdn) > 0 {
-		host = i.fqdn
-	} else if len(i.publicIP) > 0 {
-		host = i.publicIP
-	} else if len(i.privateIP) > 0 {
-		host = i.privateIP
-	} else {
-		return "", fmt.Errorf("unable to determine the managed instance's host name")
+	host = i.Instance.PublicDNS()
+	if (len(host) == 0) {
+		host = i.Instance.PublicIP()
+	}
+	if len(host) == 0 {
+		if len(i.fqdn) > 0 {
+			host = i.fqdn
+		} else if len(i.publicIP) > 0 {
+			host = i.publicIP
+		} else if len(i.privateIP) > 0 {
+			host = i.privateIP
+		} else {
+			return "", fmt.Errorf("unable to determine the managed instance's external host name/ip")
+		}	
 	}
 	if i.apiPort == "0" || i.apiPort == "80" || i.apiPort == "443" {
-		return fmt.Sprintf("%s://%s", protocol, host), nil 
+		endpoint = fmt.Sprintf("%s://%s", protocol, host)
+	} else {
+		endpoint = fmt.Sprintf("%s://%s:%s", protocol, host, i.apiPort)
 	}
-	return fmt.Sprintf("%s://%s:%s", protocol, host, i.apiPort), nil
+	logger.TraceMessage("ManagedInstance.GetEndpoint(): Endpoint for target instance \"%s\" is \"%s\".", i.name, endpoint)
+	return endpoint, nil
 }
 
 func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
