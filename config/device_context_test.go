@@ -31,8 +31,6 @@ var _ = Describe("Device Context", func() {
 		deviceName, exists := deviceContext.GetDeviceName()
 		Expect(exists).To(BeTrue())
 		Expect(deviceName).To(Equal("test device"))
-		Expect(deviceContext.Device.Address).To(Equal("device.address"))
-		Expect(deviceContext.Device.DNS).To(Equal([]string{"dns1", "dns2"}))
 
 		userID, exists := deviceContext.GetOwnerUserID()
 		Expect(exists).To(BeTrue())

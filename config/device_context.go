@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/appbricks/cloud-builder/userspace"
-	"github.com/mevansam/goutils/crypto"
 )
 
 // global configuration context
@@ -14,12 +14,16 @@ type deviceContext struct {
 	// device authentication key
 	DeviceIDKey string `json:"deviceIDKey,omitempty"`
 
-	// device key pair
-	RSAPrivateKey string `json:"rsaPrivateKey,omitempty"`
-	RSAPublicKey  string `json:"rsaPublicKey,omitempty"`
-
 	// registered device information
 	Device *userspace.Device `json:"device,omitempty"`
+
+	// managed devices - this client will always be 
+	// associated with one device which is the registered 
+	// primary device. however, the owner user can add 
+	// and manage additional secondary devices which can
+	// connect via a device's native vpn client with limited
+	// functionality.
+	ManagedDevices []*userspace.Device `json:"managedDevices,omitempty"`
 
 	// the owner user owns or has super 
 	// user access to this client/device and
@@ -44,8 +48,6 @@ func NewDeviceContext() *deviceContext {
 
 func (dc *deviceContext) Reset() error {
 	dc.DeviceIDKey = ""
-	dc.RSAPrivateKey = ""
-	dc.RSAPublicKey = ""
 	dc.Device = nil
 	dc.Owner = nil
 	dc.Users = make(map[string]*userspace.User)
@@ -70,20 +72,8 @@ func (dc *deviceContext) Save(output io.Writer) error {
 
 func (dc *deviceContext) NewDevice() (*userspace.Device, error) {
 	dc.Device = &userspace.Device{}
-	return dc.UpdateDeviceKeys()
-}
-
-func (dc *deviceContext) UpdateDeviceKeys() (*userspace.Device, error) {
-
-	var (
-		err error
-	)
-
-	// create new device key pair
-	if dc.Device.RSAPrivateKey, dc.Device.RSAPublicKey, err = crypto.CreateRSAKeyPair(nil); err != nil {
-		return nil, err
-	}	
-	return dc.Device, nil
+	err := dc.Device.UpdateKeys()
+	return dc.Device, err
 }
 
 func (dc *deviceContext) SetDeviceID(deviceIDKey, deviceID, name string) *userspace.Device {
@@ -113,6 +103,43 @@ func (dc *deviceContext) GetDeviceName() (string, bool) {
 		return "", false
 	}
 	return dc.Device.Name, true
+}
+
+func (dc *deviceContext) NewManagedDevice() (*userspace.Device, error) {
+
+	var (
+		err error
+	)
+
+	device := &userspace.Device{}
+	if err = device.UpdateKeys(); err != nil {
+		return nil, err
+	}
+
+	dc.ManagedDevices = append(dc.ManagedDevices, device)
+	return device, nil
+}
+
+func (dc *deviceContext) GetManagedDevice(deviceName string) *userspace.Device {
+	for _, device := range dc.ManagedDevices {
+		if device.Name == deviceName {
+			return device
+		}
+	}
+	return nil
+}
+
+func (dc *deviceContext) GetManagedDevices() []*userspace.Device {
+	return dc.ManagedDevices
+}
+
+func (dc *deviceContext) DeleteManageDevice(deviceID string) {
+	for i, device := range dc.ManagedDevices {
+		if device.DeviceID == deviceID {
+			dc.ManagedDevices = append(dc.ManagedDevices[:i], dc.ManagedDevices[i+1:]...)
+			return
+		}
+	}
 }
 
 func (dc *deviceContext) NewOwnerUser(userID, name string) (*userspace.User, error) {
@@ -161,6 +188,31 @@ func (dc *deviceContext) NewGuestUser(userID, name string) (*userspace.User, err
 
 func (dc *deviceContext) AddGuestUser(user *userspace.User) {
 	dc.Users[user.Name] = user
+}
+
+func (dc *deviceContext) GetGuestUsers() []*userspace.User {
+
+	// create list of ordered users
+	users := make([]*userspace.User, len(dc.Users))
+
+	OUTER:
+	for _, user := range dc.Users {		
+		i := 0
+		for _, u := range users {
+			if u != nil {
+				if strings.Compare(u.Name, user.Name) == 1 {
+					copy(users[i+1:], users[i:])
+					users[i] = user
+					continue OUTER
+				}
+			} else {
+				break
+			}
+			i++
+		}
+		users[i] = user
+	}
+	return users
 }
 
 func (dc *deviceContext) GetGuestUser(name string) (*userspace.User, bool) {

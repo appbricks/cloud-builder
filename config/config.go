@@ -60,12 +60,16 @@ type DeviceContext interface {
 	Save(output io.Writer) error
 
 	NewDevice() (*userspace.Device, error)
-	UpdateDeviceKeys() (*userspace.Device, error)
 	SetDeviceID(deviceIDKey, deviceID, name string) *userspace.Device
 	GetDevice() *userspace.Device
 	GetDeviceIDKey() string
 	GetDeviceID() (string, bool)
 	GetDeviceName() (string, bool)
+
+	NewManagedDevice() (*userspace.Device, error)
+	GetManagedDevice(deviceName string) *userspace.Device
+	GetManagedDevices() []*userspace.Device
+	DeleteManageDevice(deviceID string)
 
 	NewOwnerUser(userID, name string) (*userspace.User, error)
 	GetOwner() *userspace.User
@@ -75,6 +79,7 @@ type DeviceContext interface {
 
 	NewGuestUser(userID, name string) (*userspace.User, error)
 	AddGuestUser(user *userspace.User)
+	GetGuestUsers() []*userspace.User
 	GetGuestUser(name string) (*userspace.User, bool)
 	ResetGuestUsers() map[string]*userspace.User
 
