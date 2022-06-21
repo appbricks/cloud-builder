@@ -36,7 +36,8 @@ func RoleFromContext(
 	spaceNode userspace.SpaceNode,
 ) Role {
 	//
-	// Admin - user logged in to device is also the device and space owner. 
+	// Admin - user logged in to device is also the device and space owner
+	//         or space is nil
 	//
 	// Manager - user logged in to device IS the device owner, and has been 
 	//           granted admin access to the space. the user logged in to 
