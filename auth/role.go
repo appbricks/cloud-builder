@@ -19,6 +19,10 @@ const (
 )
 // Space user role mask
 type RoleMask uint
+// Role Mask constants
+var RoleAny = NewRoleMask(Admin, Manager, Guest)
+var RoleSpaceAdmin = NewRoleMask(Admin, Manager)
+var RoleSpaceSuperUser = NewRoleMask(Admin)
 
 func RoleFromString(r string) Role {
 	switch r {
