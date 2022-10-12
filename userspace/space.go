@@ -46,9 +46,11 @@ type SpaceNode interface {
 type Space struct {
 	key string
 
-	SpaceID   string
-	SpaceName string
-	PublicKey string
+	SpaceID     string `json:"spaceID"`
+	SpaceName   string `json:"spaceName"`
+
+	PublicKey   string `json:"publicKey"`
+	Certificate string `json:"certificate"`
 	
 	Recipe  string
 	IaaS    string
@@ -57,7 +59,7 @@ type Space struct {
 
 	IsEgressNode bool
 
-	Status    string
+	Status    string `json:"status"`
 	LastSeen  uint64
 
 	// space access for
@@ -66,11 +68,11 @@ type Space struct {
 	IsAdmin      bool
 	AccessStatus string
 
-	IPAddress   string
-	FQDN        string
-	Port        int
+	IPAddress   string `json:"ipAddress"`
+	FQDN        string `json:"fqdn"`
+	Port        int    `json:"port"`
 	VpnType     string
-	LocalCARoot string
+	LocalCARoot string `json:"localCARoot"`
 }
 
 type SpaceUser struct {
