@@ -1,6 +1,6 @@
 module github.com/appbricks/cloud-builder
 
-go 1.18
+go 1.19
 
 replace github.com/appbricks/cloud-builder => ./
 
