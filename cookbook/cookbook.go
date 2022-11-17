@@ -427,9 +427,18 @@ func (c *Cookbook) readRecipeIaaSConfigs(recipeName string, decoder *json.Decode
 
 		case string:
 			if r = c.GetRecipe(recipeName, t); r == nil {
-				return fmt.Errorf(
-					"recipe '%s' for IaaS '%s' was not found",
-					recipeName, t)
+				logger.ErrorMessage(
+					"Configured cookbook recipe '%s' for IaaS '%s' was not found",
+					recipeName, t,
+				)
+				
+				// TODO: for now we bind to a recipe instance which we discard.
+				// we need to handle this correctly if a target was created
+				// with this recipe that no longer exists in the cookbook.
+				r = &recipe{
+					name: recipeName,
+					variables: make(map[string]*Variable),
+				}
 			}
 			if err = decoder.Decode(r); err != nil {
 				return err
