@@ -7,6 +7,7 @@ set -e
 
 usage () {
   echo -e "\nUSAGE: build-cookbook.sh -r|--recipe <RECIPE REPO PATH> \\"
+  echo -e "    [-d|--dest-dir <COOKBOOK_DEST_DIR>] \\"
   echo -e "    [-b|--git-branch <GIT_BRANCH_NAME>] \\"
   echo -e "    [-n|--name <RECIPE NAME>] [-i|--iaas <TARGET IAAS>] \\"
   echo -e "    [-o|--os-name <TARGET OS>] [-a|--os-arch <TARGET OS ARCH>] \\"
@@ -15,24 +16,28 @@ usage () {
   echo -e "    The Terraform recipe should exist under the given repo path within a folder having a"
   echo -e "    <recipe name>/<iaas> folder. The 'recipe', 'name' and 'iaas' options are all required"
   echo -e "    when adding a recipe repo to the distribution.\n"
-  echo -e "    -r|--recipe      <RECIPE REPO PATH>  (required) The path to the git repo."
-  echo -e "                                         i.e https://github.com/<user>/<repo>/<path>."
-  echo -e "    -b|--git-branch  <GIT_BRANCH_NAME>   The branch or tag of the git repository. Default is \"master\"."
-  echo -e "    -n|--name        <RECIPE NAME>       The name of the recipe"
-  echo -e "    -i|--iaas        <TARGET IAAS>       The target IaaS of this recipe."
-  echo -e "    -o|--os-name     <TARGET OS>         The target OS for which recipe providers should be download."
-  echo -e "                                         Should be one of \"darwin\", \"linux\" or \"windows\"."
-  echo -e "    -a|--os-arch     <TARGET OS ARCH>    The target OS architecture."
-  echo -e "                                         Should be one of \"386\", \"amd64\", \"arm\", \"arm64\"."
-  echo -e "    -s|--single                          Only the recipe indicated shoud be added"
-  echo -e "    -c|--clean                           Clean build before proceeding"
-  echo -e "    -v|--verbose                         Trace shell execution"
+  echo -e "    -r|--recipe      <RECIPE REPO PATH>   (required) The path to the git repo."
+  echo -e "                                          i.e https://github.com/<user>/<repo>/<path>."
+  echo -e "    -d|--dest-dir    <COOKBOOK_DEST_DIR>  The cookbook destination directory."
+  echo -e "                                          Default is <CURR_DIR>/cookbook/dist."
+  echo -e "    -b|--git-branch  <GIT_BRANCH_NAME>    The branch or tag of the git repository. Default is \"master\"."
+  echo -e "    -n|--name        <RECIPE NAME>        The name of the recipe"
+  echo -e "    -i|--iaas        <TARGET IAAS>        The target IaaS of this recipe."
+  echo -e "    -o|--os-name     <TARGET OS>          The target OS for which recipe providers should be download."
+  echo -e "                                          Should be one of \"darwin\", \"linux\" or \"windows\"."
+  echo -e "    -a|--os-arch     <TARGET OS ARCH>     The target OS architecture."
+  echo -e "                                          Should be one of \"386\", \"amd64\", \"arm\", \"arm64\"."
+  echo -e "    -s|--single                           Only the recipe indicated shoud be added"
+  echo -e "    -c|--clean                            Clean build before proceeding"
+  echo -e "    -v|--verbose                          Trace shell execution"
 }
 
 recipe_git_branch_or_tag=master
 recipe_iaas=""
 target_os=$(go env GOOS)
 target_arch=$(go env GOARCH)
+
+cookbook_dest_dir=${HOME_DIR:-${root_dir}/cookbook}/dist
 
 if [[ $# -eq 0 ]]; then
   usage
@@ -47,8 +52,12 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     -r|--recipe)
-      recipe_git_project_url=$2
+      recipe_project_uri=$2
       has_recipe=1
+      shift
+      ;;
+    -d|--dest-dir)
+      cookbook_dest_dir=$2
       shift
       ;;
     -b|--git-branch)
@@ -99,14 +108,14 @@ done
 
 [[ -z $debug ]] || set -x
 
-if [[ -z $recipe_git_project_url ]]; then
+if [[ -z $recipe_project_uri ]]; then
   usage
   exit 1
 fi
 
 current_os=$(go env GOOS)
 
-build_dir=${root_dir}/build/cookbook
+build_dir=${root_dir}/.build/cookbook
 recipe_repo_dir=${build_dir}/repos
 bin_dir=${build_dir}/bin
 dist_dir=${build_dir}/dist/${target_os}_${target_arch}
@@ -116,7 +125,7 @@ cookbook_plugins_dir=${dist_dir}/bin/plugins
 cookbook_dist_zip=${build_dir}/dist/cookbook-${target_os}_${target_arch}.zip
 
 [[ -z $clean ]] || \
-  (rm -fr $dist_dir && rm -fr $dest_dist_dir && rm -f $cookbook_dist_zip)
+  (rm -fr $dist_dir && rm -f $cookbook_dist_zip)
 
 terraform_version=${TERRAFORM_VERSION:-1.3.3}
 
@@ -153,21 +162,28 @@ fi
 cookbook_recipes_dir=${dist_dir}/recipes
 [[ -z $single ]] || rm -fr $cookbook_recipes_dir
 
-if [[ -n $recipe_git_project_url ]]; then
+if [[ $recipe_project_uri == https://* ]]; then
+  url_path=${recipe_project_uri#https://*}
+elif [[ $recipe_project_uri == http://* ]]; then
+  url_path=${recipe_project_uri#http://*}
+elif [[ -e $recipe_project_uri ]]; then
+  repo_path=$recipe_project_uri
+else
+  echo "The URI $recipe_project_uri must be a URL to a git repo path (i.e. https://github.com/repo/path) or a local system path."
+  exit 1
+fi
 
-  if [[ $recipe_git_project_url == https://* ]]; then
-    url_path=${recipe_git_project_url#https://*}
-  else
-    url_path=${recipe_git_project_url#http://*}
-  fi
-
+if [[ -n $url_path ]]; then
   git_server=${url_path%%/*}
   repo_path=${url_path#*/}
 
   if [[ $git_server == http* || $repo_path == http* ]]; then
-    echo "Unable to determine repo path. Please provide the git server name to allow the path to parsed properly."
+    echo "Unable to determine repo path. Please provide a git server name to allow the path to parsed properly."
     exit 1
   fi
+fi
+
+if [[ -n $git_server ]]; then
 
   repo_org=${repo_path%%/*}
   repo_org_path=${repo_path#*/}
@@ -186,13 +202,28 @@ if [[ -n $recipe_git_project_url ]]; then
     git checkout $recipe_git_branch_or_tag
   fi
   popd
+else
+  
+  repo_name=$(basename $root_dir)
+  repo_folder=${repo_path#$root_dir/*}
 
-  recipe_list=${recipe_name:-$(ls ${recipe_repo_dir}/${repo_name}/${repo_folder})}
-  for recipe in $recipe_list; do
+  mkdir -p $(dirname ${recipe_repo_dir}/${repo_name}/${repo_folder})
+  rsync -qavr -L -P $repo_path/* ${recipe_repo_dir}/${repo_name}/${repo_folder}
+fi
+
+if [[ -z $recipe_name ]]; then
+  repo_list=$(ls ${recipe_repo_dir})
+else
+  repo_list=$repo_name
+fi
+
+for repo in $(ls ${recipe_repo_dir}); do
+  for recipe in $(ls ${recipe_repo_dir}/${repo}/${repo_folder}); do
+    [[ -z $recipe_name || $recipe_name == $recipe ]] || continue
 
     iaas_list=${recipe_iaas:-$(ls ${recipe_repo_dir}/${repo_name}/${repo_folder}/${recipe})}
     for iaas in $iaas_list; do
-      echo "Adding iaas \"${iaas}\" for recipe \"${recipe}\"..."
+      echo "Adding iaas \"${iaas}\" for recipe \"${repo}/${recipe}\"..."
 
       recipe_folder=${recipe_repo_dir}/${repo_name}/${repo_folder}/${recipe}/${iaas}
       if [[ ! -e $recipe_folder ]]; then
@@ -260,21 +291,26 @@ if [[ -n $recipe_git_project_url ]]; then
       rm -f ${cookbook_recipes_dir}/${recipe}/${iaas}/.terraform/terraform.tfstate
       rm -fr ${cookbook_recipes_dir}/${recipe}/${iaas}/.terraform/providers
     done
+
   done
-fi
+done
 
-mkdir -p ${dest_dist_dir}
-rm -f ${dest_dist_dir}/cookbook.zip
-pushd ${dist_dir}
-zip -ur $cookbook_dist_zip . -x "*.git*"
-cp $cookbook_dist_zip ${dest_dist_dir}/cookbook.zip
-popd
+if [[ -n $cookbook_dest_dir ]]; then
+  [[ -z $clean ]] || rm -fr $cookbook_dest_dir
 
-if [[ $current_os == linux ]]; then
-  stat -t -c "%Y" ${dest_dist_dir}/cookbook.zip > ${dest_dist_dir}/cookbook-mod-time
-elif [[ $current_os == darwin ]]; then
-  stat -t "%s" -f "%Sm" ${dest_dist_dir}/cookbook.zip > ${dest_dist_dir}/cookbook-mod-time
-else
-  echo -e "\nERROR! Unable to get the modification timestamp of '${dest_dist_dir}/cookbook.zip'.\n"
-  exit 1
+  mkdir -p ${cookbook_dest_dir}
+  rm -f ${cookbook_dest_dir}/cookbook.zip
+  pushd ${dist_dir}
+  zip -ur $cookbook_dist_zip . -x "*.git*"
+  cp $cookbook_dist_zip ${cookbook_dest_dir}/cookbook.zip
+  popd
+
+  if [[ $current_os == linux ]]; then
+    stat -t -c "%Y" ${cookbook_dest_dir}/cookbook.zip > ${cookbook_dest_dir}/cookbook-mod-time
+  elif [[ $current_os == darwin ]]; then
+    stat -t "%s" -f "%Sm" ${cookbook_dest_dir}/cookbook.zip > ${cookbook_dest_dir}/cookbook-mod-time
+  else
+    echo -e "\nERROR! Unable to get the modification timestamp of '${cookbook_dest_dir}/cookbook.zip'.\n"
+    exit 1
+  fi
 fi
