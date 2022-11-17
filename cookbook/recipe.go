@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -193,25 +193,37 @@ func (r *recipe) CreateCLI(
 		return nil, err
 	}
 
-	// create a backend template file with backend type declaration as
-	// there seems to be a bug in terraform where 'output' and 'taint'
-	// commands are unable to load the backend state when the working
-	// directory does not have the backend resource declared even if
-	// it is declared in the template directory.
-	backendTemplateFile := filepath.Join(workingDirectory, "backend.tf")
-	if _, err = os.Stat(backendTemplateFile); os.IsNotExist(err) {
-		if err = ioutil.WriteFile(
-			backendTemplateFile,
-			[]byte(
-				fmt.Sprintf(
-					"terraform {\n  backend \"%s\" {}\n}\n",
-					r.backendType,
+	cloudTemplatePath := filepath.Join(r.tfConfigPath, "cloud.tf")
+	if _, err = os.Stat(cloudTemplatePath); os.IsNotExist(err) {
+		// create a backend template file with backend type declaration as
+		// there seems to be a bug in terraform where 'output' and 'taint'
+		// commands are unable to load the backend state when the working
+		// directory does not have the backend resource declared even if
+		// it is declared in the template directory.
+		backendTemplateFile := filepath.Join(workingDirectory, "backend.tf")
+		if _, err = os.Stat(backendTemplateFile); os.IsNotExist(err) {
+			if err = os.WriteFile(
+				backendTemplateFile,
+				[]byte(
+					fmt.Sprintf(
+						"terraform {\n  backend \"%s\" {}\n}\n",
+						r.backendType,
+					),
 				),
-			),
-			0644,
+				0644,
+			); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		// the cloud.tf template should contain all
+		// provider information for the recipe 
+		if err = r.linkRecipeAsset(
+			cloudTemplatePath, 
+			filepath.Join(workingDirectory, "cloud.tf"),
 		); err != nil {
 			return nil, err
-		}
+		}	
 	}
 
 	recipeLockPath := filepath.Join(r.tfConfigPath, lockFileName)
@@ -238,7 +250,7 @@ func (r *recipe) linkRecipeAsset(recipePath, runLink string) error {
 
 	var (
 		err    error
-		assets []os.FileInfo
+		assets []fs.DirEntry
 
 		src, dest     string
 		fiSrc, fiDest os.FileInfo
@@ -280,7 +292,7 @@ func (r *recipe) linkRecipeAsset(recipePath, runLink string) error {
 			if err = os.MkdirAll(runLink, os.ModePerm); err != nil {
 				return err
 			}
-			if assets, err = ioutil.ReadDir(recipePath); err != nil {
+			if assets, err = os.ReadDir(recipePath); err != nil {
 				return err
 			}
 			// link all assets in given path to run link path
