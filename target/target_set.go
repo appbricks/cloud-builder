@@ -110,7 +110,7 @@ func (ts *TargetSet) GetTargets() []*Target {
 
 func (ts *TargetSet) GetTarget(name string) *Target {
 	logger.TraceMessage(
-		"Retrieving target with name '%s' from: %# v",
+		"Retrieving target with name '%s' from: %+v",
 		name, ts.targets)
 
 	return ts.targets[name]
