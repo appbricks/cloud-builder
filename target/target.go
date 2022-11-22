@@ -781,7 +781,9 @@ func (i *ManagedInstance) GetEndpoint() (string, error) {
 	}
 	host = i.Instance.PublicDNS()
 	if (len(host) == 0) {
-		host = i.Instance.PublicIP()
+		host = fmt.Sprintf(
+			"%s.mycs.appbricks.org", strings.ReplaceAll(i.Instance.PublicIP(), ".", "-"),
+		)
 	}
 	if len(host) == 0 {
 		if len(i.fqdn) > 0 {
