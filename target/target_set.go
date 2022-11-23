@@ -195,6 +195,7 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		target.RSAPublicKey = parsedTarget.RSAPublicKey
 		target.SpaceKey = parsedTarget.SpaceKey
 		target.SpaceID = parsedTarget.SpaceID
+		target.Refresh()
 
 		if len(target.DependentTargets) > 0 {
 			targetsWithDependencies = append(targetsWithDependencies, target)

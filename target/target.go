@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/terraform"
@@ -69,7 +70,18 @@ type Target struct {
 
 	managedInstances []*ManagedInstance
 	compute          cloud.Compute
+
+	loadingState       int
+	loadRemoteRefWG    sync.WaitGroup
+	loadRemoteRefError error
 }
+
+type loadingStates = int
+const (
+	dirty loadingStates = iota
+	loading
+	loaded
+)
 
 type ManagedInstance struct {
 	Instance cloud.ComputeInstance
@@ -131,6 +143,36 @@ func NewTarget(
 	}
 }
 
+func (t *Target) Name() string {
+	return fmt.Sprintf(
+		"Deployment \"%s\" on Cloud \"%s\" and Region \"%s\"",
+		t.DeploymentName(),
+		t.Provider.Name(),
+		*t.Provider.Region(),
+	)
+}
+
+func (t *Target) Description() string {
+	return t.description
+}
+
+func (t *Target) Version() string {
+	return t.version
+}
+
+func (t *Target) DeploymentName() string {
+
+	if variable, exists := t.Recipe.GetVariable("name"); exists && variable.Value != nil {
+		return *variable.Value
+	} else {
+		return "NONAME"
+	}
+}
+
+func (t *Target) Dependencies() []*Target {
+	return t.dependencies
+}
+
 func (t *Target) UpdateKeys() (*Target, error) {
 
 	var (
@@ -144,8 +186,160 @@ func (t *Target) UpdateKeys() (*Target, error) {
 	return t, nil
 }
 
+// functions referencing target's remote managed cloud instances
+
+func (t *Target) ManagedInstances() []*ManagedInstance {
+
+	if t.loadingState != loading && 
+		(t.loadingState == dirty || t.managedInstances == nil) {
+		t.Refresh()
+	}
+	t.loadRemoteRefWG.Wait()
+	return t.managedInstances
+}
+
+func (t *Target) ManagedInstance(name string) *ManagedInstance {
+
+	for _, managedInstance := range t.ManagedInstances() {
+		if managedInstance.name == name {
+			return managedInstance
+		}
+	}
+	return nil
+}
+
+func (t *Target) Resume(cb InstanceStateChange) error {
+
+	var (
+		err error
+	)
+
+	if t.Status() == Shutdown {
+		for _, managedInstance := range t.managedInstances {
+			cb(managedInstance.name, managedInstance.Instance)
+			if err = managedInstance.Instance.Start(); err != nil {
+				return err
+			}
+			cb(managedInstance.name, managedInstance.Instance)
+		}
+	} else {
+		return fmt.Errorf("target is not in a 'shutdown' state")
+	}
+
+	return nil
+}
+
+func (t *Target) Suspend(cb InstanceStateChange) error {
+
+	var (
+		err error
+	)
+
+	if t.Status() == Running {
+		for _, managedInstance := range t.managedInstances {
+			cb(managedInstance.name, managedInstance.Instance)
+			if err = managedInstance.Instance.Stop(); err != nil {
+				return err
+			}
+			cb(managedInstance.name, managedInstance.Instance)
+		}
+	} else {
+		return fmt.Errorf("target is not in a 'shutdown' state")
+	}
+
+	return nil
+}
+
+func (t *Target) Status() TargetState {
+
+	var (
+		err error
+
+		state cloud.InstanceState
+	)
+
+	if t.Output != nil {
+		managedInstances := t.ManagedInstances()
+		if managedInstances == nil || t.loadRemoteRefError != nil {
+			return Unknown
+		}
+
+		numInstances := len(managedInstances)
+		numRunning := 0
+		numStopped := 0
+		numPending := 0
+		numUnknown := 0
+		for _, instance := range managedInstances {
+			if state, err = instance.Instance.State(); err != nil {
+				logger.TraceMessage(
+					"Managed instance '%s' of target '%s' returned an error when querying its state: %s",
+					instance.Instance.Name(), t.Key(), err.Error(),
+				)
+				numUnknown++
+				continue
+			}
+			switch state {
+			case cloud.StateRunning:
+				numRunning++
+			case cloud.StateStopped:
+				numStopped++
+			case cloud.StatePending:
+				numPending++
+			default:
+				numUnknown++
+			}
+		}
+
+		if numUnknown == numInstances {
+			return Unknown
+		}
+		if numRunning == numInstances {
+			return Running
+		}
+		if numStopped == numInstances {
+			return Shutdown
+		}
+		if (numRunning + numStopped + numPending) == numInstances {
+			return Pending
+		}
+
+		logger.DebugMessage(
+			"Unable to determine state of target '%s'. Have %d instances with state %d running, %d stopped, %d pending and %d unknown.",
+			t.Key(), numInstances, numRunning, numStopped, numPending, numUnknown,
+		)
+		return Unknown
+
+	} else {
+		return Undeployed
+	}
+}
+
+func (t *Target) Error() error {
+	t.loadRemoteRefWG.Wait()
+	return t.loadRemoteRefError
+}
+
+func (t *Target) Refresh() {
+	
+	t.loadingState = loading
+	t.loadRemoteRefWG.Add(1)
+	
+	go func() {
+
+		defer func() {
+			t.loadingState = loaded
+		}()
+
+		if t.loadRemoteRefError = t.loadRemoteRefs(); t.loadRemoteRefError != nil {
+			logger.DebugMessage(
+				"Error refreshing remote refs of target '%s':", 
+				t.Key(), t.loadRemoteRefError.Error())
+		}
+	}()
+}
+
 // load target cloud references
-func (t *Target) LoadRemoteRefs() error {
+func (t *Target) loadRemoteRefs() error {
 
 	var (
 		err error
@@ -165,6 +359,8 @@ func (t *Target) LoadRemoteRefs() error {
 
 		instanceRef map[string]*ManagedInstance
 	)
+
+	defer t.loadRemoteRefWG.Done()
 
 	readKeyValue := func(key string) (string, error) {
 		if value, ok = instanceMetaData[key]; !ok {
@@ -316,152 +512,6 @@ func (t *Target) LoadRemoteRefs() error {
 				t.Key(),
 			)
 		}
-	}
-
-	return nil
-}
-
-func (t *Target) Name() string {
-	return fmt.Sprintf(
-		"Deployment \"%s\" on Cloud \"%s\" and Region \"%s\"",
-		t.DeploymentName(),
-		t.Provider.Name(),
-		*t.Provider.Region(),
-	)
-}
-
-func (t *Target) Description() string {
-	return t.description
-}
-
-func (t *Target) Version() string {
-	return t.version
-}
-
-func (t *Target) DeploymentName() string {
-
-	if variable, exists := t.Recipe.GetVariable("name"); exists && variable.Value != nil {
-		return *variable.Value
-	} else {
-		return "NONAME"
-	}
-}
-
-func (t *Target) Dependencies() []*Target {
-	return t.dependencies
-}
-
-func (t *Target) Status() TargetState {
-
-	var (
-		err error
-
-		state cloud.InstanceState
-	)
-
-	if t.Output != nil {
-
-		numInstances := len(t.managedInstances)
-		numRunning := 0
-		numStopped := 0
-		numPending := 0
-		numUnknown := 0
-		for _, instance := range t.managedInstances {
-			if state, err = instance.Instance.State(); err != nil {
-				logger.TraceMessage(
-					"Managed instance '%s' of target '%s' returned an error when querying its state: %s",
-					instance.Instance.Name(), t.Key(), err.Error(),
-				)
-				numUnknown++
-				continue
-			}
-			switch state {
-			case cloud.StateRunning:
-				numRunning++
-			case cloud.StateStopped:
-				numStopped++
-			case cloud.StatePending:
-				numPending++
-			default:
-				numUnknown++
-			}
-		}
-
-		if numUnknown == numInstances {
-			return Unknown
-		}
-		if numRunning == numInstances {
-			return Running
-		}
-		if numStopped == numInstances {
-			return Shutdown
-		}
-		if (numRunning + numStopped + numPending) == numInstances {
-			return Pending
-		}
-
-		logger.DebugMessage(
-			"Unable to determine state of target '%s'. Have %d instances with state %d running, %d stopped, %d pending and %d unknown.",
-			t.Key(), numInstances, numRunning, numStopped, numPending, numUnknown,
-		)
-		return Unknown
-
-	} else {
-		return Undeployed
-	}
-}
-
-func (t *Target) ManagedInstances() []*ManagedInstance {
-	return t.managedInstances
-}
-
-func (t *Target) ManagedInstance(name string) *ManagedInstance {
-
-	for _, managedInstance := range t.managedInstances {
-		if managedInstance.name == name {
-			return managedInstance
-		}
-	}
-	return nil
-}
-
-func (t *Target) Resume(cb InstanceStateChange) error {
-
-	var (
-		err error
-	)
-
-	if t.Status() == Shutdown {
-		for _, managedInstance := range t.managedInstances {
-			cb(managedInstance.name, managedInstance.Instance)
-			if err = managedInstance.Instance.Start(); err != nil {
-				return err
-			}
-			cb(managedInstance.name, managedInstance.Instance)
-		}
-	} else {
-		return fmt.Errorf("target is not in a 'shutdown' state")
-	}
-
-	return nil
-}
-
-func (t *Target) Suspend(cb InstanceStateChange) error {
-
-	var (
-		err error
-	)
-
-	if t.Status() == Running {
-		for _, managedInstance := range t.managedInstances {
-			cb(managedInstance.name, managedInstance.Instance)
-			if err = managedInstance.Instance.Stop(); err != nil {
-				return err
-			}
-			cb(managedInstance.name, managedInstance.Instance)
-		}
-	} else {
-		return fmt.Errorf("target is not in a 'shutdown' state")
 	}
 
 	return nil
@@ -620,10 +670,8 @@ func (t *Target) GetVersion() string {
 
 func (t *Target) GetStatus() string {
 
-	if err := t.LoadRemoteRefs(); err != nil {
-		logger.DebugMessage("Target.GetStatus(): ERROR! Failed to load targets remote references: %s", err.Error())
-		return "unknown"
-	}
+	// force refresh
+	t.loadingState = dirty
 
 	return []string{
 		"undeployed",
