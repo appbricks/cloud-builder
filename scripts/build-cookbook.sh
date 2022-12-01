@@ -295,15 +295,16 @@ for repo in $(ls ${recipe_repo_dir}); do
   done
 done
 
+pushd ${dist_dir}
+zip -ur $cookbook_dist_zip . -x "*.git*"
+popd
+
 if [[ -n $cookbook_dest_dir ]]; then
   [[ -z $clean ]] || rm -fr $cookbook_dest_dir
 
   mkdir -p ${cookbook_dest_dir}
   rm -f ${cookbook_dest_dir}/cookbook.zip
-  pushd ${dist_dir}
-  zip -ur $cookbook_dist_zip . -x "*.git*"
   cp $cookbook_dist_zip ${cookbook_dest_dir}/cookbook.zip
-  popd
 
   if [[ $current_os == linux ]]; then
     stat -t -c "%Y" ${cookbook_dest_dir}/cookbook.zip > ${cookbook_dest_dir}/cookbook-mod-time
