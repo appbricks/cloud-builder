@@ -514,6 +514,12 @@ func (t *Target) loadRemoteRefs() error {
 		}
 	}
 
+	if t.managedInstances == nil {
+		// either target has no managed instances 
+		// or it has not been deployed yet
+		t.managedInstances = []*ManagedInstance{}
+	}
+
 	return nil
 }
 
