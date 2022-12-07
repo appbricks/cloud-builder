@@ -25,11 +25,12 @@ usage () {
   echo -e "       --cookbook-name    <COOKBOOK NAME>      The cookbook name"
   echo -e "       --cookbook-version <COOKBOOK VERSION>   The version of the cookbook"
   echo -e "    -o|--os-name          <TARGET OS>          The target OS for which recipe providers should be download."
-  echo -e "                                                Should be one of \"darwin\", \"linux\" or \"windows\"."
+  echo -e "                                               Should be one of \"darwin\", \"linux\" or \"windows\"."
   echo -e "    -a|--os-arch          <TARGET OS ARCH>     The target OS architecture."
   echo -e "                                               Should be one of \"386\", \"amd64\", \"arm\", \"arm64\"."
   echo -e "    -d|--dest-dir         <COOKBOOK_DEST_DIR>  The cookbook destination directory."
   echo -e "                                               Default is <CURR_DIR>/cookbook/dist."
+  echo -e "    -t|--template-only                         Add only templates and template plugin dependencies to archive"
   echo -e "    -s|--single                                Only the recipe indicated shoud be added"
   echo -e "    -c|--clean                                 Clean build before proceeding"
   echo -e "    -v|--verbose                               Trace shell execution"
@@ -98,6 +99,9 @@ while [[ $# -gt 0 ]]; do
     -d|--dest-dir)
       cookbook_dest_dir=$2
       shift
+      ;;
+    -t|--template-only)
+      template_only=1
       ;;
     -s|--single)
       single=1
@@ -222,6 +226,8 @@ else
   rsync -qavr -L -P $repo_path/* ${recipe_repo_dir}/${repo_name}/${repo_folder}
 fi
 
+[[ -n $cookook_name ]] || cookook_name=$repo_name
+
 if [[ -z $recipe_name ]]; then
   repo_list=$(ls ${recipe_repo_dir})
 else
@@ -308,10 +314,20 @@ done
 
 pushd ${dist_dir}
 
-[[ -z $cookbook_name ]] || echo -en "$cookbook_name" > NAME
-[[ -z $cookbook_version ]] || echo -en "$cookbook_version" > VERSION
- 
-zip -ur $cookbook_dist_zip . -x "*.git*"
+terraform_version=$($terraform version | awk '/^Terraform v/{ print substr($2, 2) }')
+
+cat << ---EOF > METADATA
+---
+cookbook-name: '$cookbook_name'
+cookbook-version: '$cookbook_version'
+terraform-version: '$terraform_version'
+---EOF
+
+if [[ -n $template_only ]]; then
+  zip -ur $cookbook_dist_zip . -x "*.git*" -x "terraform"
+else
+  zip -ur $cookbook_dist_zip . -x "*.git*"
+fi
 popd
 
 if [[ -n $cookbook_dest_dir ]]; then
