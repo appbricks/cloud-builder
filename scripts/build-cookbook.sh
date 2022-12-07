@@ -7,29 +7,32 @@ set -e
 
 usage () {
   echo -e "\nUSAGE: build-cookbook.sh -r|--recipe <RECIPE REPO PATH> \\"
-  echo -e "    [-d|--dest-dir <COOKBOOK_DEST_DIR>] \\"
   echo -e "    [-b|--git-branch <GIT_BRANCH_NAME>] \\"
   echo -e "    [-n|--name <RECIPE NAME>] [-i|--iaas <TARGET IAAS>] \\"
+  echo -e "    [--cookbook-name <COOKBOOK NAME>] [--cookbook-version <COOKBOOK VERSION>] \\"
   echo -e "    [-o|--os-name <TARGET OS>] [-a|--os-arch <TARGET OS ARCH>] \\"
+  echo -e "    [-d|--dest-dir <COOKBOOK_DEST_DIR>] \\"
   echo -e "    [-s|--single] [-c|--clean]] [-v|--verbose]\n"
   echo -e "    This utility script packages the terraform recipes or distribution with the service."
   echo -e "    The Terraform recipe should exist under the given repo path within a folder having a"
   echo -e "    <recipe name>/<iaas> folder. The 'recipe', 'name' and 'iaas' options are all required"
   echo -e "    when adding a recipe repo to the distribution.\n"
-  echo -e "    -r|--recipe      <RECIPE REPO PATH>   (required) The path to the git repo."
-  echo -e "                                          i.e https://github.com/<user>/<repo>/<path>."
-  echo -e "    -d|--dest-dir    <COOKBOOK_DEST_DIR>  The cookbook destination directory."
-  echo -e "                                          Default is <CURR_DIR>/cookbook/dist."
-  echo -e "    -b|--git-branch  <GIT_BRANCH_NAME>    The branch or tag of the git repository. Default is \"master\"."
-  echo -e "    -n|--name        <RECIPE NAME>        The name of the recipe"
-  echo -e "    -i|--iaas        <TARGET IAAS>        The target IaaS of this recipe."
-  echo -e "    -o|--os-name     <TARGET OS>          The target OS for which recipe providers should be download."
-  echo -e "                                          Should be one of \"darwin\", \"linux\" or \"windows\"."
-  echo -e "    -a|--os-arch     <TARGET OS ARCH>     The target OS architecture."
-  echo -e "                                          Should be one of \"386\", \"amd64\", \"arm\", \"arm64\"."
-  echo -e "    -s|--single                           Only the recipe indicated shoud be added"
-  echo -e "    -c|--clean                            Clean build before proceeding"
-  echo -e "    -v|--verbose                          Trace shell execution"
+  echo -e "    -r|--recipe           <RECIPE REPO PATH>   (required) The path to the git repo."
+  echo -e "                                               i.e https://github.com/<user>/<repo>/<path>."
+  echo -e "    -b|--git-branch       <GIT_BRANCH_NAME>    The branch or tag of the git repository. Default is \"master\"."
+  echo -e "    -n|--name             <RECIPE NAME>        The name of the recipe"
+  echo -e "    -i|--iaas             <TARGET IAAS>        The target IaaS of this recipe."
+  echo -e "       --cookbook-name    <COOKBOOK NAME>      The cookbook name"
+  echo -e "       --cookbook-version <COOKBOOK VERSION>   The version of the cookbook"
+  echo -e "    -o|--os-name          <TARGET OS>          The target OS for which recipe providers should be download."
+  echo -e "                                                Should be one of \"darwin\", \"linux\" or \"windows\"."
+  echo -e "    -a|--os-arch          <TARGET OS ARCH>     The target OS architecture."
+  echo -e "                                               Should be one of \"386\", \"amd64\", \"arm\", \"arm64\"."
+  echo -e "    -d|--dest-dir         <COOKBOOK_DEST_DIR>  The cookbook destination directory."
+  echo -e "                                               Default is <CURR_DIR>/cookbook/dist."
+  echo -e "    -s|--single                                Only the recipe indicated shoud be added"
+  echo -e "    -c|--clean                                 Clean build before proceeding"
+  echo -e "    -v|--verbose                               Trace shell execution"
 }
 
 recipe_git_branch_or_tag=master
@@ -56,10 +59,6 @@ while [[ $# -gt 0 ]]; do
       has_recipe=1
       shift
       ;;
-    -d|--dest-dir)
-      cookbook_dest_dir=$2
-      shift
-      ;;
     -b|--git-branch)
       recipe_git_branch_or_tag=$2
       shift
@@ -70,6 +69,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     -i|--iaas)
       recipe_iaas=$2
+      shift
+      ;;
+    --cookbook-name)
+      cookbook_name=$2
+      shift
+      ;;
+    --cookbook-version)
+      cookbook_version=$2
       shift
       ;;
     -o|--os-name)
@@ -86,6 +93,10 @@ while [[ $# -gt 0 ]]; do
         echo "ERROR! Only OS archs 386, amd64, arm or arm64 are supported.";
         exit 1;
       )
+      shift
+      ;;
+    -d|--dest-dir)
+      cookbook_dest_dir=$2
       shift
       ;;
     -s|--single)
@@ -296,6 +307,10 @@ for repo in $(ls ${recipe_repo_dir}); do
 done
 
 pushd ${dist_dir}
+
+[[ -z $cookbook_name ]] || echo -en "$cookbook_name" > NAME
+[[ -z $cookbook_version ]] || echo -en "$cookbook_version" > VERSION
+ 
 zip -ur $cookbook_dist_zip . -x "*.git*"
 popd
 
