@@ -142,7 +142,7 @@ cookbook_dist_zip=${build_dir}/dist/cookbook-${target_os}_${target_arch}.zip
 [[ -z $clean ]] || \
   (rm -fr $dist_dir && rm -f $cookbook_dist_zip)
 
-terraform_version=${TERRAFORM_VERSION:-1.3.3}
+terraform_version=${TERRAFORM_VERSION:-1.3.6}
 
 mkdir -p $bin_dir
 terraform=${bin_dir}/terraform
@@ -321,6 +321,8 @@ cat << ---EOF > METADATA
 cookbook-name: '$cookbook_name'
 cookbook-version: '$cookbook_version'
 terraform-version: '$terraform_version'
+target-os-name: '$target_os'
+target-os-arch: '$target_arch'
 ---EOF
 
 if [[ -n $template_only ]]; then
