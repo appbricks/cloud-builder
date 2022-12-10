@@ -334,7 +334,7 @@ target-os-arch: '$target_arch'
 ---EOF
 
 if [[ -n $template_only ]]; then
-  zip -ur $cookbook_dist_zip . -x "*.git*" -x "terraform"
+  zip -ur $cookbook_dist_zip . -x "*.git*" -x "bin/terraform"
 else
   zip -ur $cookbook_dist_zip . -x "*.git*"
 fi
