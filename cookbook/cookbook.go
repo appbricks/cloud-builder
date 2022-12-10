@@ -244,7 +244,7 @@ func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
 					filepath.Join(cookbookRoot, pathSuffix),
 					c.tfPluginPath,
 					c.tfCLIPath,
-					filepath.Join(c.workspacePath, "run", pathSuffix),
+					filepath.Join(c.workspacePath, "run", cm.CookbookName, pathSuffix),
 					metadata.CookbookName,
 					metadata.CookbookVersion,
 					recipeName,
