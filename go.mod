@@ -35,6 +35,8 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 )
 
+require gopkg.in/yaml.v2 v2.4.0
+
 require (
 	cloud.google.com/go v0.100.2 // indirect
 	cloud.google.com/go/compute v1.5.0 // indirect
@@ -121,5 +123,4 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

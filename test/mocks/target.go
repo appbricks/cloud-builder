@@ -172,8 +172,8 @@ func NewMockTarget(cli run.CLI, bastionIP string, bastionPort int, caRootPEM str
 		RSAPrivateKey: targetRSAPrivateKey,
 		RSAPublicKey: targetRSAPublicKey,
 
-		SpaceKey: targetSpaceKey,
-		SpaceID: targetSpaceID,
+		NodeKey: targetSpaceKey,
+		NodeID: targetSpaceID,
 	}
 }
 

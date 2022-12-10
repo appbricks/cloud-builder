@@ -81,8 +81,8 @@ var _ = Describe("Target", func() {
 			err = form.SetFieldValue("key", "s3objectkey")
 			Expect(err).NotTo(HaveOccurred())
 
-			t.SpaceKey = "abcd"
-			t.SpaceID = "1234"
+			t.NodeKey = "abcd"
+			t.NodeID = "1234"
 
 			encoder := json.NewEncoder(&outputBuffer)
 			err := encoder.Encode(t)

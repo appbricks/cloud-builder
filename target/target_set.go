@@ -39,8 +39,8 @@ type parsedTarget struct {
 	RSAPrivateKey string `json:"rsaPrivateKey,omitempty"`
 	RSAPublicKey  string `json:"rsaPublicKey,omitempty"`
 
-	SpaceKey string `json:"spaceKey,omitempty"`
-	SpaceID  string `json:"spaceID,omitempty"`
+	NodeKey string `json:"nodeKey,omitempty"`
+	NodeID  string `json:"nodeID,omitempty"`
 }
 
 // interface definition of global config context
@@ -196,8 +196,8 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		target.CookbookVersion = parsedTarget.CookbookVersion
 		target.RSAPrivateKey = parsedTarget.RSAPrivateKey
 		target.RSAPublicKey = parsedTarget.RSAPublicKey
-		target.SpaceKey = parsedTarget.SpaceKey
-		target.SpaceID = parsedTarget.SpaceID
+		target.NodeKey = parsedTarget.NodeKey
+		target.NodeID = parsedTarget.NodeID
 		target.Refresh()
 
 		if len(target.DependentTargets) > 0 {

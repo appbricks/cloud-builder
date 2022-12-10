@@ -59,8 +59,8 @@ type Target struct {
 	RSAPrivateKey string `json:"rsaPrivateKey,omitempty"`
 	RSAPublicKey  string `json:"rsaPublicKey,omitempty"`
 
-	SpaceKey string `json:"spaceKey,omitempty"`
-	SpaceID  string `json:"spaceID,omitempty"`
+	NodeKey string `json:"nodeKey,omitempty"`
+	NodeID  string `json:"nodeID,omitempty"`
 
 	dependencies []*Target
 
@@ -569,8 +569,8 @@ func (t *Target) Copy() (*Target, error) {
 		RSAPrivateKey: t.RSAPrivateKey,
 		RSAPublicKey: t.RSAPublicKey,
 
-		SpaceKey: t.SpaceKey,
-		SpaceID: t.SpaceID,
+		NodeKey: t.NodeKey,
+		NodeID: t.NodeID,
 
 		dependencies: t.dependencies,
 
@@ -611,7 +611,7 @@ func (t *Target) NewBuilder(
 	additonalInputs := make(map[string]string)
 	if t.Recipe.IsBastion() {
 		additonalInputs["mycs_node_private_key"] = t.RSAPrivateKey
-		additonalInputs["mycs_node_id_key"] = t.SpaceKey
+		additonalInputs["mycs_node_id_key"] = t.NodeKey
 	}
 	for _, dt := range t.dependencies {
 		for name, output := range *dt.Output {
@@ -657,7 +657,7 @@ func (t *Target) Key() string {
 }
 
 func (t *Target) GetSpaceID() string {
-	return t.SpaceID
+	return t.NodeID
 }
 
 func (t *Target) GetSpaceName() string {
