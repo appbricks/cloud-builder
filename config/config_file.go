@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -403,7 +402,7 @@ func (cf *configFile) Save() error {
 		if valueReader, err = cf.getValue("targetContext"); err != nil {
 			return err
 		}
-		if value, err = ioutil.ReadAll(valueReader); err != nil {
+		if value, err = io.ReadAll(valueReader); err != nil {
 			return err
 		}
 		if err = setValue("targetContext", value); err != nil {

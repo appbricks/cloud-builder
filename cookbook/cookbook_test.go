@@ -33,7 +33,7 @@ var _ = Describe("Cookbook", func() {
 		err = test_data.EnsureCookbookIsBuilt(workspacePath)
 		Expect(err).NotTo(HaveOccurred())
 
-		cookbookDistPath := workspacePath + "/dist"
+		cookbookDistPath := filepath.Join(workspacePath, "dist")
 		box := packr.New(cookbookDistPath, cookbookDistPath)
 
 		c, err = cookbook.NewCookbook(box, workspacePath, &outputBuffer, &errorBuffer)
@@ -61,29 +61,11 @@ var _ = Describe("Cookbook", func() {
 			})
 
 			It("lists all the recipes in the Cookbook and the IaaS's a recipe can be launched in", func() {
-
-				var (
-					exists  bool
-					iaasSet []string
-				)
-
-				recipeSet := map[string][]string{
-					"basic":  {"aws", "google"},
-					"simple": {"google"},
-				}
-
-				recipeList := c.RecipeList()
-				Expect(len(recipeList)).To(Equal(len(recipeSet)))
-
-				for _, info := range recipeList {
-					iaasSet, exists = recipeSet[info.Name]
-					Expect(exists).To(BeTrue())
-
-					Expect(len(info.IaaSList)).To(Equal(len(iaasSet)))
-					for i, iaas := range iaasSet {
-						Expect(info.IaaSList[i].Name()).To(Equal(iaas))
-					}
-				}
+				
+				validateCoobookRecipes(c, map[string][]string{
+					"test:basic":  {"aws", "google"},
+					"test:simple": {"google"},
+				})
 			})
 		})
 	})
@@ -108,7 +90,7 @@ var _ = Describe("Cookbook", func() {
 			labelModule := filepath.Join(runPath, ".terraform", "modules", "label")
 			moduleMeta := filepath.Join(runPath, ".terraform", "modules", "modules.json")
 
-			r := c.GetRecipe("basic", "aws")
+			r := c.GetRecipe("test:basic", "aws")
 			Expect(r).NotTo(BeNil())
 			
 			cli, err = r.CreateCLI("test", &outputBuffer, &errorBuffer)
@@ -161,7 +143,7 @@ var _ = Describe("Cookbook", func() {
 				err = json.Unmarshal([]byte(outputBuffer.String()), &actual)
 				Expect(err).NotTo(HaveOccurred())
 
-				recipeConfigs, err = utils.GetItemsWithMatchAtPath("name", "^basic$", actual)
+				recipeConfigs, err = utils.GetItemsWithMatchAtPath("name", "^test:basic$", actual)
 				Expect(err).NotTo(HaveOccurred())
 				actualRecipeConfig := recipeConfigs[0]
 				logger.TraceMessage("Marshalled config parsed into a nest map structure: %# v", actualRecipeConfig)
@@ -170,7 +152,7 @@ var _ = Describe("Cookbook", func() {
 				err = json.Unmarshal([]byte(cookbookConfigDocumentDefault), &expected)
 				Expect(err).NotTo(HaveOccurred())
 
-				recipeConfigs, err = utils.GetItemsWithMatchAtPath("name", "^basic$", expected)
+				recipeConfigs, err = utils.GetItemsWithMatchAtPath("name", "^test:basic$", expected)
 				Expect(err).NotTo(HaveOccurred())
 				expectedRecipeConfig := recipeConfigs[0]
 
@@ -187,10 +169,109 @@ var _ = Describe("Cookbook", func() {
 	})
 })
 
+var _ = Describe("Cookbook Import", func() {
+
+	var (
+		err error
+
+		outputBuffer,
+		errorBuffer strings.Builder
+	)
+
+	It("imports a cookbook", func() {
+		err = test_data.EnsureCookbookIsBuilt(workspacePath)
+		Expect(err).NotTo(HaveOccurred())
+
+		cookbookDistPath := filepath.Join(workspacePath, "dist")
+		box := packr.New(cookbookDistPath, cookbookDistPath)
+
+		c1, err := cookbook.NewCookbook(box, filepath.Join(workspacePath, "import"), &outputBuffer, &errorBuffer)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c1).ToNot(BeNil())
+
+		err = c1.ImportCookbook(filepath.Join(workspacePath, "import", "cookbook.zip"))
+		Expect(err).NotTo(HaveOccurred())
+
+		err = c1.Validate()
+		Expect(err).NotTo(HaveOccurred())
+
+		validateCoobookRecipes(c1, map[string][]string{
+			"test:basic":  {"aws", "google"},
+			"test:simple": {"google"},
+			"minecraft:server": {"aws", "azure", "google"},
+		})
+
+		c2, err := cookbook.NewCookbook(box, filepath.Join(workspacePath, "import"), &outputBuffer, &errorBuffer)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c1).ToNot(BeNil())
+
+		err = c2.Validate()
+		Expect(err).NotTo(HaveOccurred())
+
+		validateCoobookRecipes(c2, map[string][]string{
+			"test:basic":  {"aws", "google"},
+			"test:simple": {"google"},
+			"minecraft:server": {"aws", "azure", "google"},
+		})
+
+		cookbookList := c2.CookbookList(false)
+		Expect(len(cookbookList) == 2)
+		Expect(cookbookList[0].CookbookName).To(Equal("test"))
+		Expect(cookbookList[0].Imported).To(BeFalse())
+		Expect(cookbookList[0].Recipes).To(Equal([]string{"basic", "simple"}))
+		Expect(cookbookList[1].CookbookName).To(Equal("minecraft"))
+		Expect(cookbookList[1].Imported).To(BeTrue())
+		Expect(cookbookList[1].Recipes).To(Equal([]string{"server"}))
+
+		err = c2.DeleteImportedCookbook("minecraft")
+		Expect(err).NotTo(HaveOccurred())
+
+		// ensure cookbook recipes have been deleted frm c2 instance
+		validateCoobookRecipes(c2, map[string][]string{
+			"test:basic":  {"aws", "google"},
+			"test:simple": {"google"},
+		})
+
+		// ensure cookbook folder has been deleted
+		c3, err := cookbook.NewCookbook(box, filepath.Join(workspacePath, "import"), &outputBuffer, &errorBuffer)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c3).ToNot(BeNil())
+
+		validateCoobookRecipes(c3, map[string][]string{
+			"test:basic":  {"aws", "google"},
+			"test:simple": {"google"},
+		})
+	})
+})
+
+func validateCoobookRecipes(c *cookbook.Cookbook, recipeSet map[string][]string) {
+
+	var (
+		exists bool
+
+		recipeKey string
+		iaasSet   []string
+	)
+
+	recipeList := c.RecipeList()
+	Expect(len(recipeList)).To(Equal(len(recipeSet)))
+
+	for _, info := range recipeList {
+		recipeKey = info.CookbookName + ":" + info.RecipeName
+		iaasSet, exists = recipeSet[recipeKey]
+		Expect(exists).To(BeTrue())
+
+		Expect(len(info.IaaSList)).To(Equal(len(iaasSet)))
+		for i, iaas := range iaasSet {
+			Expect(info.IaaSList[i].Name()).To(Equal(iaas))
+		}
+	}
+}
+
 const cookbookConfigDocumentDefault = `
 [
   {
-    "name": "basic",
+    "name": "test:basic",
     "config": {
       "aws": {
         "variables": [
@@ -222,7 +303,7 @@ const cookbookConfigDocumentDefault = `
     }
 	},
 	{
-		"name": "simple",
+		"name": "test:simple",
 		"config": {
       "google": {
         "variables": []

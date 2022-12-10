@@ -52,10 +52,11 @@ type Space struct {
 	PublicKey   string `json:"publicKey"`
 	Certificate string `json:"certificate"`
 	
-	Recipe  string
-	IaaS    string
-	Region  string	
-	Version string
+	Cookbook string
+	Recipe   string
+	IaaS     string
+	Region   string	
+	Version  string
 
 	IsEgressNode bool
 
@@ -93,6 +94,8 @@ func (s *Space) Key() string {
 	)
 
 	if len(s.key) == 0 {
+		key.WriteString(s.Cookbook)
+		key.Write([]byte{':'})
 		key.WriteString(s.Recipe)
 		key.Write([]byte{'/'})
 		key.WriteString(s.IaaS)

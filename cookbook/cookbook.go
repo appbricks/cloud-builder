@@ -5,17 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/mevansam/gocloud/provider"
 	"github.com/mevansam/goutils/logger"
 	"github.com/mevansam/goutils/utils"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -24,17 +27,48 @@ const (
 )
 
 type Cookbook struct {
-	path  string
-	files []string
+	workspacePath string
 
+	path,
+	tfPluginPath,
+	tfCLIPath string
+
+	files []string
+	
 	// nested map [recipe_name][iaas_name]
 	recipes map[string]map[string]Recipe
+
+	cookbooks         map[string]*CookbookMetadata
+	cookbookTimestamp string
+
+	mx   sync.Mutex
+	init sync.WaitGroup
+	errs []error
 }
 
 type CookbookRecipeInfo struct {
-	Name      string
+	RecipeKey string
+	
+	CookbookName    string
+	CookbookVersion string
+	RecipeName      string
+
 	IsBastion bool
 	IaaSList  []provider.CloudProvider
+}
+
+type CookbookMetadata struct {
+	CookbookName     string `yaml:"cookbook-name"`
+	CookbookVersion  string `yaml:"cookbook-version"`
+	Description      string `yaml:"description"`
+	TerraformVersion string `yaml:"terraform-version"`
+	TargetOsName     string `yaml:"target-os-name"`
+	TargetOsArch     string `yaml:"target-os-arch"`
+
+	Imported bool
+	Recipes  []string
+
+	cookbookPath string
 }
 
 var recipePathMatcher = regexp.MustCompile(
@@ -52,64 +86,27 @@ func NewCookbook(
 
 	var (
 		err error
-		ok  bool
 
-		cookbookTimestamp,
-		tfPluginPath,
-		tfCLIPath string
+		ts string
+		c  *Cookbook
 
-		c *Cookbook
-		r Recipe
+		importedCookbooks []os.DirEntry
+		vbytes            []byte
 	)
 
-	if cookbookTimestamp, err = box.FindString(cookbookModTime); err != nil {
+	if ts, err = box.FindString(cookbookModTime); err != nil {
 		return nil, err
 	}
-	cookbookTimestamp = strings.Trim(cookbookTimestamp, "\n")
+	ts = strings.Trim(ts, "\n")
 
 	c = &Cookbook{
-		path:    filepath.Join(workspacePath, "cookbook", cookbookTimestamp),
+		workspacePath: workspacePath,
+
+		path:    filepath.Join(workspacePath, "cookbook", ts),
 		recipes: make(map[string]map[string]Recipe),
-	}
 
-	// Updates cookbook metadata
-	addMetadata := func(file string) error {
-
-		var (
-			match bool
-			rr    map[string]Recipe
-		)
-
-		if match = recipePathMatcher.Match([]byte(file)); match {
-
-			elems := strings.Split(file, filePathSeparator)
-			if len(elems) >= 4 {
-				pathSuffix := filepath.Join(elems[0], elems[1], elems[2])
-
-				name := elems[1]
-				iaas := elems[2]
-
-				if rr, ok = c.recipes[name]; !ok {
-					rr = make(map[string]Recipe)
-					c.recipes[name] = rr
-				}
-				if r, err = NewRecipe(
-					name,
-					iaas,
-					filepath.Join(c.path, pathSuffix),
-					tfPluginPath,
-					tfCLIPath,
-					filepath.Join(workspacePath, "run", pathSuffix),
-					cookbookTimestamp,
-				); err != nil {
-					return err
-				}
-
-				logger.TraceMessage("Initialized recipe: %#v\n", r)
-				rr[iaas] = r
-			}
-		}
-		return nil
+		cookbooks:         make(map[string]*CookbookMetadata),
+		cookbookTimestamp: ts,
 	}
 
 	info, err := os.Stat(c.path)
@@ -128,46 +125,407 @@ func NewCookbook(
 	if info.IsDir() {
 
 		// embedded cookbook plugin path
-		tfPluginPath = filepath.Join(c.path, "bin", "plugins")
+		c.tfPluginPath = filepath.Join(c.path, "bin", "plugins")
 		if runtime.GOOS == "windows" {
 			// windows cli
-			tfCLIPath = filepath.Join(c.path, "bin", "terraform.exe")
+			c.tfCLIPath = filepath.Join(c.path, "bin", "terraform.exe")
 		} else {
 			// *nix cli
-			tfCLIPath = filepath.Join(c.path, "bin", "terraform")
+			c.tfCLIPath = filepath.Join(c.path, "bin", "terraform")
 		}
 
 		// Retrieve cookbook file list by walking
 		// the extracted cookbook's directory tree
 		c.files = []string{}
 
-		pathPrefixLen := len(c.path) + 1
-		err = filepath.Walk(c.path,
-			func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if len(path) >= pathPrefixLen {
-					filepath := path[pathPrefixLen:]
-					c.files = append(c.files, filepath)
-
-					err = addMetadata(filepath)
-					if err != nil {
-						return err
-					}
-				}
-				return nil
-			})
-
-		if err != nil {
+		// add core recipes
+		if err = c.addRecipeMetadata(c.path, filepath.Join(c.path, "recipes")); err != nil {
 			return nil, err
 		}
-		logger.TraceMessage("Initialized cookbook: %# v", c)
+		// add recipes from imported cookbooks
+		importedPath := filepath.Join(c.workspacePath, "cookbook", "library")
+		if importedCookbooks, err = os.ReadDir(importedPath); err == nil {
+			for _, ic := range importedCookbooks {
+				icpath := filepath.Join(importedPath, ic.Name())
+				if vbytes, err = os.ReadFile(filepath.Join(icpath, "CURRENT")); err != nil {
+					return nil, err
+				}
+				vpath := filepath.Join(icpath, strings.TrimSpace(string(vbytes[:])))
+				if err = c.addRecipeMetadata(vpath, filepath.Join(vpath, "recipes")); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		c.init.Wait()
+		if len(c.errs) > 0 {
+			return nil, c.errs[0]
+		}
+		logger.DebugMessage("Initialized cookbook at '%s'.", c.path)
 
 	} else {
 		return nil, fmt.Errorf("cookbook path '%s' exists but is not a directory", c.path)
 	}
 	return c, nil
+}
+
+func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
+
+	var (
+		err error
+		ok  bool
+
+		cm *CookbookMetadata		
+		r  Recipe
+	)
+
+	// Updates cookbook metadata
+	addMetadata := func(file string) error {
+
+		var (
+			rr map[string]Recipe
+
+			data []byte
+
+			recipeKey string
+		)
+
+		if match := recipePathMatcher.Match([]byte(file)); match {
+
+			elems := strings.Split(file, filePathSeparator)
+			if len(elems) >= 4 {
+				pathSuffix := filepath.Join(elems[0], elems[1], elems[2])
+
+				recipeName := elems[1]
+				recipeIaaS := elems[2]
+
+				metadata := CookbookMetadata{}
+				if data, err = os.ReadFile(filepath.Join(cookbookRoot, "METADATA")); err != nil {
+					return err
+				}
+				if err = yaml.Unmarshal(data, &metadata); err != nil {
+					return err
+				}
+				
+				recipeKey = metadata.CookbookName + ":" + recipeName
+
+				c.mx.Lock()
+
+				// add/update recipe's cookbook
+				if cm, ok = c.cookbooks[metadata.CookbookName]; !ok {
+					metadata.Imported = (c.path != cookbookRoot)
+					metadata.cookbookPath = cookbookRoot
+					cm = &metadata
+					c.cookbooks[metadata.CookbookName] = cm
+				}
+				l := len(cm.Recipes)
+				i := sort.Search(l, func(j int) bool {
+					return recipeName <= cm.Recipes[j]
+				})
+				if i == l || recipeName != cm.Recipes[i] {
+					cm.Recipes = append(cm.Recipes, recipeName)
+					if i < l {
+						copy(cm.Recipes[i+1:], cm.Recipes[i:])
+						cm.Recipes[i] = recipeName	
+					}
+				}
+
+				// add update recipe map
+				if rr, ok = c.recipes[recipeKey]; !ok {
+					rr = make(map[string]Recipe)
+					c.recipes[recipeKey] = rr					
+				}
+
+				c.mx.Unlock()
+
+				if r, err = NewRecipe(
+					recipeKey,
+					recipeIaaS,
+					filepath.Join(cookbookRoot, pathSuffix),
+					c.tfPluginPath,
+					c.tfCLIPath,
+					filepath.Join(c.workspacePath, "run", pathSuffix),
+					metadata.CookbookName,
+					metadata.CookbookVersion,
+					recipeName,
+				); err != nil {
+					return err
+				}
+				c.mx.Lock()
+				rr[recipeIaaS] = r
+				c.mx.Unlock()
+				
+				logger.DebugMessage("Initialized recipe '%s'.\n", r.Name())
+				logger.TraceMessage("Recipe metadata for '%s': %# v\n", r.Name(), r)
+			}
+		}
+		return nil
+	}
+
+	errs := []error{}
+	pathPrefixLen := len(cookbookRoot) + 1
+	
+	if err = filepath.WalkDir(recipesPath,
+		func(path string, de fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if len(path) >= pathPrefixLen {
+				filepath := path[pathPrefixLen:]
+				c.files = append(c.files, filepath)
+
+				c.init.Add(1)
+				go func() {
+					defer c.init.Done()						
+					
+					if err = addMetadata(filepath); err != nil {
+						errs = append(errs, err)
+					}	
+				}()
+			}
+			return nil
+		},
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Cookbook) ImportCookbook(cookbookPath string) (err error) {
+
+	var (
+		ok  bool
+
+		fi      os.FileInfo
+		zipFile *os.File
+
+		data  []byte
+	)
+
+	libraryPath := filepath.Join(
+		c.workspacePath, 
+		"cookbook", 
+		"library",
+	)
+
+	// extract cookbook to be imported
+	unzipPath := filepath.Join(libraryPath, ".new")
+	os.RemoveAll(unzipPath)
+	if err = os.MkdirAll(unzipPath, 0755); err != nil {
+		return err
+	}
+	defer os.RemoveAll(unzipPath)
+
+	if fi, err = os.Stat(cookbookPath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("cookbook '%s' file to import does not exist", cookbookPath)
+		}
+		return err
+	}
+	if zipFile, err = os.Open(cookbookPath); err != nil {
+		return err
+	}
+	if _, err = utils.UnzipStream(zipFile, fi.Size(), unzipPath); err != nil {
+		return err
+	}
+
+	// validate cookbook structure
+	invalidError := fmt.Errorf("invalid cookbook structure")
+	if fi, err = os.Stat(filepath.Join(unzipPath, "bin", "plugins", "registry.terraform.io")); os.IsNotExist(err) || !fi.IsDir() {
+		return invalidError
+	}
+	if fi, err = os.Stat(filepath.Join(unzipPath, "recipes")); os.IsNotExist(err) || !fi.IsDir() {
+		return invalidError
+	}
+
+	// read cookbook metadata
+	metadata := CookbookMetadata{}
+	if data, err = os.ReadFile(filepath.Join(unzipPath, "METADATA")); err != nil {
+		return err
+	}
+	if err = yaml.Unmarshal(data, &metadata); err != nil {
+		return err
+	}
+	if len(metadata.CookbookName) == 0 ||
+		len(metadata.CookbookVersion) == 0 ||
+		len(metadata.TerraformVersion) == 0 ||
+		len(metadata.TargetOsName) == 0 ||
+		len(metadata.TargetOsArch) == 0 {
+		return invalidError
+	}
+	if runtime.GOOS != metadata.TargetOsName {
+		return fmt.Errorf("cookbook does not support local system's os")
+	}
+	if runtime.GOARCH != metadata.TargetOsArch {
+		return fmt.Errorf("cookbook does not support local system os' architecture")
+	}
+
+	// import cookbook
+	importPath := filepath.Join(
+		libraryPath, 
+		metadata.CookbookName,
+	)
+	if err = os.MkdirAll(importPath, 0755); err != nil {
+		return err
+	}
+	currentVersionFile := filepath.Join(importPath, "CURRENT")
+	defer func() {
+		if err != nil {
+			if _, e := os.Stat(currentVersionFile); os.IsNotExist(e) {
+				os.RemoveAll(importPath)
+			}	
+		}
+	}()
+	
+	// move unzipped cookbook to versioned path
+	versionedPath := filepath.Join(importPath, metadata.CookbookVersion)
+	if _, err = os.Stat(versionedPath); os.IsNotExist(err) {
+		if err = os.Rename(unzipPath, versionedPath); err != nil {
+			return err
+		}
+		
+	} else if err != nil {
+		return err
+
+	} else {
+		// if cookbook version to be imported exists then check if the content match
+		if ok, err = utils.DirCompare(unzipPath, versionedPath); err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("cookbook version appears to have already been imported but does not match cookook being imported")
+		}
+	}
+
+	os.Remove(currentVersionFile)
+	if err = os.WriteFile(currentVersionFile, []byte(metadata.CookbookVersion), 0644); err != nil {
+		return err
+	}
+
+	return c.importCookbook(importPath)
+}
+
+func (c *Cookbook) importCookbook(cookbookPath string) error {
+
+	var (
+		err error
+
+		vbytes []byte
+	)
+
+	if vbytes, err = os.ReadFile(filepath.Join(cookbookPath, "CURRENT")); err != nil {
+		return err
+	}
+	versionedPath := filepath.Join(cookbookPath, strings.TrimSpace(string(vbytes[:])))
+	pluginSrcPath := filepath.Join(versionedPath, "bin", "plugins", "registry.terraform.io")
+	pluginDestPath := filepath.Join(c.path, "bin", "plugins", "registry.terraform.io")
+
+	errs := []error{}
+
+	if err = filepath.WalkDir(pluginSrcPath, func(p string, de fs.DirEntry, err error) error {	
+
+		if err != nil {
+			return err
+		}
+		if de.Type().IsRegular() {
+
+			c.init.Add(1)
+			go func() {
+				defer c.init.Done()
+
+				destPath := filepath.Join(pluginDestPath, strings.TrimPrefix(p, pluginSrcPath))			
+				if _, err = os.Stat(destPath); os.IsNotExist(err) {
+					if err = os.MkdirAll(filepath.Dir(destPath), 0755); err == nil {
+						if err = utils.CopyFiles(p, destPath, 1024); err != nil {
+							os.Remove(destPath)
+						}	
+					}
+				}
+				if err != nil {
+					logger.ErrorMessage("Error adding imported cookbook plugin to main: %s", err.Error())
+					errs = append(errs, err)
+				}
+			}()
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// load all recipes in imported cookbook
+	if err = c.addRecipeMetadata(versionedPath, filepath.Join(versionedPath, "recipes")); err != nil {
+		return err
+	}
+
+	c.init.Wait()
+	if len(errs) > 0 {
+		return errs[0]
+	}
+	return nil
+}
+
+func (c *Cookbook) GetCookbook(name string) *CookbookMetadata {
+	return c.cookbooks[name]
+}
+
+func (c *Cookbook) CookbookList(importedOnly bool) []*CookbookMetadata {
+
+	cookbookList := make([]*CookbookMetadata, 0, len(c.cookbooks))
+	l := 0
+
+	// create sorted cookbook list 
+	// in order of cookbook name
+	for _, cm := range c.cookbooks {
+		if importedOnly && !cm.Imported {
+			// skip embedded cookooks
+			continue
+		}
+
+		i := sort.Search(l, func(j int) bool {
+			return (!cm.Imported && cookbookList[j].Imported) ||
+				(cm.Imported == cookbookList[j].Imported && cm.CookbookName < cookbookList[j].CookbookName)
+		})
+		cookbookList = cookbookList[:l+1]
+		if i == l {
+			cookbookList[l] = cm
+		} else {
+			copy(cookbookList[i+1:], cookbookList[i:])
+			cookbookList[i] = cm	
+		}
+		l++
+	}
+	return cookbookList
+}
+
+func (c *Cookbook) DeleteImportedCookbook(name string) error {
+
+	var (
+		err error
+	)
+
+	cm := c.cookbooks[name]
+	if cm != nil {
+
+		if !cm.Imported {
+			return fmt.Errorf("embedded cookbook '%s' cannot be delete", name)
+		}
+
+		cookbookLibraryPath := filepath.Dir(cm.cookbookPath)
+		if err = os.RemoveAll(cookbookLibraryPath); err != nil {
+			return err
+		}
+
+		// remove all cookbook recipes
+		recipePrefix := name + ":"
+		for key := range c.recipes {
+			if strings.HasPrefix(key, recipePrefix) {
+				delete(c.recipes, key)
+			}
+		}
+	}
+	return nil
 }
 
 func (c *Cookbook) Validate() error {
@@ -242,10 +600,11 @@ func (c *Cookbook) IaaSList() []provider.CloudProvider {
 func (c *Cookbook) RecipeList() []CookbookRecipeInfo {
 
 	var (
-		name, iaas string
+		iaas string
 
-		rr map[string]Recipe
-		r  Recipe
+		key string
+		rr  map[string]Recipe
+		r   Recipe
 
 		recipeInfo CookbookRecipeInfo
 	)
@@ -253,26 +612,37 @@ func (c *Cookbook) RecipeList() []CookbookRecipeInfo {
 	recipeInfos := make([]CookbookRecipeInfo, 0, len(c.recipes))
 	l := 0
 
-	for name, rr = range c.recipes {
+	for key, rr = range c.recipes {
 		recipeInfo = CookbookRecipeInfo{
-			Name:     name,
 			IaaSList: []provider.CloudProvider{},
 		}
 
-		// add iaas list and sort them
+		// add iaas list
 		for iaas, r = range rr {
 			cp, _ := provider.NewCloudProvider(iaas)
 			recipeInfo.IaaSList = append(recipeInfo.IaaSList, cp)
 		}
 		provider.SortCloudProviders(recipeInfo.IaaSList)
+
+		recipeInfo.RecipeKey = key
+		recipeInfo.CookbookName = r.CookbookName()
+		recipeInfo.CookbookVersion = r.CookbookVersion()
+		recipeInfo.RecipeName = r.RecipeName()
+
 		recipeInfo.IsBastion = r.IsBastion()
 
+		// insert recipe in descending order of cookebook and recipe name
+		// (bastion recipes are added to the head of the list)
 		i := sort.Search(l, func(j int) bool {
 			return (recipeInfo.IsBastion && !recipeInfos[j].IsBastion) ||
-				recipeInfos[j].Name > recipeInfo.Name
+				(recipeInfo.IsBastion == recipeInfos[j].IsBastion &&
+					(recipeInfo.CookbookName < recipeInfos[j].CookbookName ||
+					recipeInfo.RecipeName < recipeInfos[j].RecipeName))
 		})
-		recipeInfos = append(recipeInfos, recipeInfo)
-		if len(recipeInfos) > 1 {
+		recipeInfos = recipeInfos[:l+1]
+		if i == l {
+			recipeInfos[l] = recipeInfo
+		} else {
 			copy(recipeInfos[i+1:], recipeInfos[i:])
 			recipeInfos[i] = recipeInfo
 		}
@@ -281,20 +651,22 @@ func (c *Cookbook) RecipeList() []CookbookRecipeInfo {
 	return recipeInfos
 }
 
-func (c *Cookbook) HasRecipe(recipe, iaas string) bool {
+func (c *Cookbook) HasRecipe(recipeKey, iaas string) bool {
+	c.init.Wait()
 
 	var (
 		ok bool
 		rr map[string]Recipe
 	)
 
-	if rr, ok = c.recipes[recipe]; ok {
+	if rr, ok = c.recipes[recipeKey]; ok {
 		_, ok = rr[iaas]
 	}
 	return ok
 }
 
-func (c *Cookbook) GetRecipe(recipe, iaas string) Recipe {
+func (c *Cookbook) GetRecipe(recipeKey, iaas string) Recipe {
+	c.init.Wait()
 
 	var (
 		ok bool
@@ -303,7 +675,7 @@ func (c *Cookbook) GetRecipe(recipe, iaas string) Recipe {
 	)
 
 	r = nil
-	if rr, ok = c.recipes[recipe]; ok {
+	if rr, ok = c.recipes[recipeKey]; ok {
 		r = rr[iaas]
 	}
 	return r
@@ -313,16 +685,17 @@ func (c *Cookbook) SetRecipe(recipe Recipe) {
 
 	var (
 		ok bool
-		rr map[string]Recipe
+
+		recipeKey string
+		rr        map[string]Recipe
 	)
 
-	nameElements := strings.Split(recipe.Name(), "/")
-
-	if rr, ok = c.recipes[nameElements[0]]; !ok {
+	recipeKey = recipe.CookbookName() + ":" + recipe.RecipeName()
+	if rr, ok = c.recipes[recipeKey]; !ok {
 		rr = make(map[string]Recipe)
-		c.recipes[nameElements[0]] = rr
+		c.recipes[recipeKey] = rr
 	}
-	rr[nameElements[1]] = recipe
+	rr[recipe.RecipeIaaS()] = recipe
 }
 
 // interface: encoding/json/Unmarshaler
@@ -431,6 +804,9 @@ func (c *Cookbook) readRecipeIaaSConfigs(recipeName string, decoder *json.Decode
 					"Configured cookbook recipe '%s' for IaaS '%s' was not found",
 					recipeName, t,
 				)
+
+				// TODO: there appears to be a race condition here where we get
+				// a recipe not found error intermittently
 				
 				// TODO: for now we bind to a recipe instance which we discard.
 				// we need to handle this correctly if a target was created

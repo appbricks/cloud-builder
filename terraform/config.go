@@ -126,7 +126,7 @@ func NewConfigReader() *configReader {
 }
 
 func (r *configReader) ReadMetadata(
-	name,
+	key,
 	iaas,
 	configPath string,
 ) error {
@@ -151,7 +151,7 @@ func (r *configReader) ReadMetadata(
 
 	logger.DebugMessage(
 		"Loading Terraform templates for recipe '%s' and iaas '%s' at path '%s'.",
-		name, iaas, configPath,
+		key, iaas, configPath,
 	)
 	if info, err = os.Stat(configPath); err != nil {
 		return err
@@ -231,7 +231,7 @@ func (r *configReader) ReadMetadata(
 		r.recipeDescription, variableList)
 
 	// populate input form
-	r.inputForm = forms_config.RecipeConfigForms.NewGroup(strings.Join([]string{name, iaas}, "/"), r.recipeDescription)
+	r.inputForm = forms_config.RecipeConfigForms.NewGroup(key + "/" + iaas, r.recipeDescription)
 	for _, vm = range variableList {
 
 		defaultValue = nil

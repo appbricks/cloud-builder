@@ -116,6 +116,18 @@ func (f *FakeRecipe) BackendType() string {
 	return "fake"
 }
 
-func (f *FakeRecipe) CookbookTimestamp() string {
+func (f *FakeRecipe) CookbookName() string {
+	return "fakecookebook"
+}
+
+func (f *FakeRecipe) CookbookVersion() string {
 	return "faketimestamp"
+}
+
+func (f *FakeRecipe) RecipeName() string {
+	return "fakerecipe"
+}
+
+func (f *FakeRecipe) RecipeIaaS() string {
+	return "fakeiaas"
 }

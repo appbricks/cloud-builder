@@ -42,8 +42,12 @@ const (
 // a target is a recipe configured to be
 // launched in a public cloud region
 type Target struct {
-	RecipeName string `json:"recipeName"`
-	RecipeIaas string `json:"recipeIaas"`
+	RecipeName   string `json:"recipeName"`
+	RecipeIaas   string `json:"recipeIaas"`
+
+	CookbookName    string `json:"cookbookName,omitempty"`
+	CookbookVersion string `json:"cookbookVersion,omitempty"`
+
 	DependentTargets []string `json:"dependentTargets"`
 
 	Recipe   cookbook.Recipe        `json:"recipe,omitempty"`
@@ -51,8 +55,6 @@ type Target struct {
 	Backend  backend.CloudBackend   `json:"backend,omitempty"`
 
 	Output *map[string]terraform.Output `json:"output,omitempty"`
-
-	CookbookTimestamp string `json:"cookbook_timestamp,omitempty"`
 
 	RSAPrivateKey string `json:"rsaPrivateKey,omitempty"`
 	RSAPublicKey  string `json:"rsaPublicKey,omitempty"`
@@ -110,7 +112,7 @@ type ManagedInstance struct {
 
 // create a target key
 func CreateKey(
-	recipeName, iaasName string, 
+	recipeKey, iaasName string, 
 	keyValues ...string,
 ) string {
 	
@@ -118,7 +120,7 @@ func CreateKey(
 		key strings.Builder
 	)
 	
-	key.WriteString(recipeName)
+	key.WriteString(recipeKey)
 	key.Write([]byte{'/'})
 	key.WriteString(iaasName)
 	key.Write([]byte{'/'})
@@ -127,17 +129,23 @@ func CreateKey(
 }
 
 func NewTarget(
-	r, p, b config.Configurable,
+	r cookbook.Recipe, 
+	p provider.CloudProvider, 
+	b backend.CloudBackend,
 ) *Target {
 
 	return &Target{
-		RecipeName: strings.Split(r.Name(), "/")[0],
+		RecipeName: r.RecipeName(),
 		RecipeIaas: p.Name(),
+
+		CookbookName:    r.CookbookName(),
+		CookbookVersion: r.CookbookVersion(),
+
 		DependentTargets: []string{},
 
-		Recipe:   r.(cookbook.Recipe),
-		Provider: p.(provider.CloudProvider),
-		Backend:  b.(backend.CloudBackend),
+		Recipe:   r,
+		Provider: p,
+		Backend:  b,
 
 		dependencies: []*Target{},
 	}
@@ -546,6 +554,10 @@ func (t *Target) Copy() (*Target, error) {
 	return &Target{
 		RecipeName: t.RecipeName,
 		RecipeIaas: t.RecipeIaas,
+
+		CookbookName: t.CookbookName,
+		CookbookVersion: t.CookbookVersion,
+
 		DependentTargets: t.DependentTargets,
 
 		Recipe:   recipeCopy.(cookbook.Recipe),
@@ -553,8 +565,6 @@ func (t *Target) Copy() (*Target, error) {
 		Backend:  backendCopy.(backend.CloudBackend),
 
 		Output: t.Output,
-
-		CookbookTimestamp: t.CookbookTimestamp,
 
 		RSAPrivateKey: t.RSAPrivateKey,
 		RSAPublicKey: t.RSAPublicKey,
@@ -643,7 +653,7 @@ func (t *Target) Key() string {
 	for _, dt := range t.dependencies {
 		keyValues = append(keyValues, "<"+dt.Key())
 	}
-	return CreateKey(t.RecipeName, t.RecipeIaas, keyValues...)
+	return CreateKey(t.CookbookName + ":" + t.RecipeName, t.RecipeIaas, keyValues...)
 }
 
 func (t *Target) GetSpaceID() string {

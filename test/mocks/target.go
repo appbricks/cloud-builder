@@ -69,7 +69,7 @@ func (mctx *FakeTargetContext) GetCloudProvider(iaas string) (provider.CloudProv
 func (mctx *FakeTargetContext) SaveCloudProvider(provider provider.CloudProvider) {
 }
 
-func (mctx *FakeTargetContext) NewTarget(recipeName, recipeIaas string,) (*target.Target, error) {
+func (mctx *FakeTargetContext) NewTarget(recipeKey, recipeIaas string,) (*target.Target, error) {
 
 	var (
 		err error
@@ -79,11 +79,14 @@ func (mctx *FakeTargetContext) NewTarget(recipeName, recipeIaas string,) (*targe
 		b backend.CloudBackend
 	)
 
+	recipeElems := strings.Split(recipeKey, ":")
+	cookbookName := recipeElems[0]
+	recipeName := recipeElems[1]
+
 	if r, err = cookbook.NewRecipe(
-		recipeName,
-		recipeIaas,
+		recipeKey, recipeIaas,
 		fmt.Sprintf("%s/%s/%s", mctx.recipePath, recipeName, recipeIaas),
-		"", "", "", ""); err != nil {
+		"", "", "", cookbookName, "0.0.0", recipeName); err != nil {
 		return nil, err
 	}
 	if p, err = provider.NewCloudProvider(recipeIaas); err != nil {

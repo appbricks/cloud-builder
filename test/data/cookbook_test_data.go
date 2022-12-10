@@ -1,8 +1,8 @@
 package data
 
 import (
-	. "github.com/onsi/gomega"
 	"github.com/appbricks/cloud-builder/cookbook"
+	. "github.com/onsi/gomega"
 )
 
 // coookbook configuration test data
@@ -10,7 +10,7 @@ import (
 const CookbookConfigDocument = `
 [
   {
-    "name": "basic",
+    "name": "test:basic",
     "config": {
       "aws": {
         "variables": [
@@ -58,7 +58,7 @@ const CookbookConfigDocument = `
     }
 	},
 	{
-		"name": "simple",
+		"name": "test:simple",
 		"config": {
       "google": {
         "variables": [
@@ -83,7 +83,7 @@ func ValidateCookbookConfigDocument(ckbk *cookbook.Cookbook) {
 		value  *string
 	)
 
-	recipe = ckbk.GetRecipe("basic", "aws")
+	recipe = ckbk.GetRecipe("test:basic", "aws")
 	Expect(recipe).ToNot(BeNil())
 
 	value, err = recipe.GetValue("test_input_1")
@@ -120,7 +120,7 @@ func ValidateCookbookConfigDocument(ckbk *cookbook.Cookbook) {
 	Expect(value).ToNot(BeNil())
 	Expect(*value).To(Equal("us-east-1"))
 
-	recipe = ckbk.GetRecipe("basic", "google")
+	recipe = ckbk.GetRecipe("test:basic", "google")
 	Expect(recipe).ToNot(BeNil())
 
 	value, err = recipe.GetValue("test_input")
@@ -128,7 +128,7 @@ func ValidateCookbookConfigDocument(ckbk *cookbook.Cookbook) {
 	Expect(value).ToNot(BeNil())
 	Expect(*value).To(Equal("google test input"))
 
-	recipe = ckbk.GetRecipe("simple", "google")
+	recipe = ckbk.GetRecipe("test:simple", "google")
 	Expect(recipe).ToNot(BeNil())
 
 	value, err = recipe.GetValue("test_simple_input_1")

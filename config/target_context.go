@@ -361,24 +361,24 @@ func (cc *targetContext) SaveCloudBackend(backend backend.CloudBackend) {
 }
 
 func (cc *targetContext) NewTarget(
-	recipeName, recipeIaas string,
+	recipeKey, recipeIaas string,
 ) (*target.Target, error) {
 
 	var (
 		err error
 
-		recipeCopy,
-		providerCopy,
-		backendCopy config.Configurable
+		recipeCopy   cookbook.Recipe
+		providerCopy provider.CloudProvider
+		backendCopy  backend.CloudBackend
 	)
 
-	if recipeCopy, err = cc.GetCookbookRecipe(recipeName, recipeIaas); err != nil {
+	if recipeCopy, err = cc.GetCookbookRecipe(recipeKey, recipeIaas); err != nil {
 		return nil, err
 	}
 	if providerCopy, err = cc.GetCloudProvider(recipeIaas); err != nil {
 		return nil, err
 	}
-	backendType := recipeCopy.(cookbook.Recipe).BackendType()
+	backendType := recipeCopy.BackendType()
 	if len(backendType) != 0 {
 		if backendCopy, err = cc.GetCloudBackend(backendType); err != nil {
 			return nil, err

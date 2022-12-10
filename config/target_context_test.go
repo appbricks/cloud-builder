@@ -75,9 +75,9 @@ var _ = Describe("Target Context", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// get config context targets
-			tgt1, err = ctx.GetTarget("basic/aws/aa/")
+			tgt1, err = ctx.GetTarget("test:basic/aws/aa/")
 			Expect(err).NotTo(HaveOccurred())
-			tgt2, err = ctx.GetTarget("basic/aws/cc/appbrickscookbook")
+			tgt2, err = ctx.GetTarget("test:basic/aws/cc/appbrickscookbook")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -90,6 +90,7 @@ var _ = Describe("Target Context", func() {
 			test_data.ValidateCookbookConfigDocument(ctx.Cookbook())
 
 			Expect(tgt1).ToNot(BeNil())
+			Expect(tgt1.CookbookName).To(Equal("test"))
 			Expect(tgt1.RecipeName).To(Equal("basic"))
 			Expect(tgt1.RecipeIaas).To(Equal("aws"))
 			cloud_test_data.ValidateAWSConfigDocument(tgt1.Provider)
@@ -156,7 +157,7 @@ var _ = Describe("Target Context", func() {
 			err = utils.SortValueMap("name", recipes)
 			Expect(err).NotTo(HaveOccurred())
 
-			recipeConfigs, err := utils.GetItemsWithMatchAtPath("name", "^basic$", recipes)
+			recipeConfigs, err := utils.GetItemsWithMatchAtPath("name", "^test:basic$", recipes)
 			Expect(err).NotTo(HaveOccurred())
 			variables, err := utils.GetValueAtPath("config/aws/variables", recipeConfigs[0])
 			Expect(err).NotTo(HaveOccurred())
@@ -231,7 +232,7 @@ var _ = Describe("Target Context", func() {
 			Expect(*value).To(Equal("updated access_key"))
 
 			// recipe elements
-			recipe1, err = ctx.GetCookbookRecipe("basic", "aws")
+			recipe1, err = ctx.GetCookbookRecipe("test:basic", "aws")
 			Expect(err).NotTo(HaveOccurred())
 
 			form, err = recipe1.InputForm()
@@ -240,7 +241,7 @@ var _ = Describe("Target Context", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// recipe key should remain unchanged in main config structure
-			recipe2, err = ctx.GetCookbookRecipe("basic", "aws")
+			recipe2, err = ctx.GetCookbookRecipe("test:basic", "aws")
 			Expect(err).NotTo(HaveOccurred())
 			value, err = recipe2.GetValue("test_input_6")
 			Expect(*value).To(Equal("abcd66"))
@@ -248,7 +249,7 @@ var _ = Describe("Target Context", func() {
 			// updated recipe key value should now be persisted to main config structure
 			ctx.SaveCookbookRecipe(recipe1)
 
-			recipe2, err = ctx.GetCookbookRecipe("basic", "aws")
+			recipe2, err = ctx.GetCookbookRecipe("test:basic", "aws")
 			Expect(err).NotTo(HaveOccurred())
 			value, err = recipe2.GetValue("test_input_6")
 			Expect(*value).To(Equal("abcd666"))
@@ -265,7 +266,7 @@ var _ = Describe("Target Context", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// updated target should now be persisted to main config structure
-			tgt, err = ctx.GetTarget("basic/aws/aa/")
+			tgt, err = ctx.GetTarget("test:basic/aws/aa/")
 			Expect(err).NotTo(HaveOccurred())
 			value, err = tgt.Recipe.GetValue("test_input_7")
 			Expect(*value).To(Equal("us-east-1"))
@@ -275,7 +276,7 @@ var _ = Describe("Target Context", func() {
 			// updated target should now be persisted to main config structure
 			ctx.SaveTarget("basic/aws/aa/", tgt1)
 
-			tgt, err = ctx.GetTarget("basic/aws/aa/")
+			tgt, err = ctx.GetTarget("test:basic/aws/aa/")
 			Expect(err).NotTo(HaveOccurred())
 			value, err = tgt.Recipe.GetValue("test_input_7")
 			Expect(*value).To(Equal("eu-central-1"))
@@ -303,6 +304,7 @@ const configDocument = `
 			{
 				"recipeName": "basic",
 				"recipeIaas": "aws",
+				"cookbookName": "test",
 				"dependentTargets": [],
 				"recipe": {
 					"variables": ` + test_data.AWSBasicRecipeVariables1 + `
@@ -315,6 +317,7 @@ const configDocument = `
 			{
 				"recipeName": "basic",
 				"recipeIaas": "aws",
+				"cookbookName": "test",
 				"dependentTargets": [],
 				"recipe": {
 					"variables": ` + test_data.AWSBasicRecipeVariables2 + `

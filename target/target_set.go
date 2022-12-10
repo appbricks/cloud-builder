@@ -24,6 +24,10 @@ type TargetSet struct {
 type parsedTarget struct {
 	RecipeName string `json:"recipeName"`
 	RecipeIaas string `json:"recipeIaas"`
+
+	CookbookName    string `json:"cookbookName"`
+	CookbookVersion string `json:"cookbookVersion"`
+
 	DependentTargets []string `json:"dependentTargets"`
 
 	Recipe   json.RawMessage `json:"recipe"`
@@ -31,8 +35,6 @@ type parsedTarget struct {
 	Backend  json.RawMessage `json:"backend"`
 
 	Output *map[string]terraform.Output `json:"output,omitempty"`
-
-	CookbookTimestamp string `json:"cookbook_timestamp"`
 
 	RSAPrivateKey string `json:"rsaPrivateKey,omitempty"`
 	RSAPublicKey  string `json:"rsaPublicKey,omitempty"`
@@ -46,7 +48,7 @@ type parsedTarget struct {
 // mocking and avoid cyclical dependencies.
 type context interface {
 	NewTarget(
-		recipeName,
+		recipeKey,
 		recipeIaas string,
 	) (*Target, error)
 }
@@ -60,7 +62,7 @@ func NewTargetSet(ctx context) *TargetSet {
 }
 
 func (ts *TargetSet) Lookup(
-	recipeName, iaasName string,
+	recipeKey, iaasName string,
 	keyValues ...string,
 ) []*Target {
 
@@ -68,7 +70,7 @@ func (ts *TargetSet) Lookup(
 		key strings.Builder
 	)
 
-	key.WriteString(recipeName)
+	key.WriteString(recipeKey)
 	key.Write([]byte{'/'})
 	key.WriteString(iaasName)
 	key.Write([]byte{'/'})
@@ -174,7 +176,7 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		}
 
 		if target, err = ts.ctx.NewTarget(
-			parsedTarget.RecipeName,
+			parsedTarget.CookbookName + ":" + parsedTarget.RecipeName,
 			parsedTarget.RecipeIaas,
 		); err != nil {
 			return err
@@ -190,7 +192,8 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		}
 		target.DependentTargets = parsedTarget.DependentTargets
 		target.Output = parsedTarget.Output
-		target.CookbookTimestamp = parsedTarget.CookbookTimestamp
+		target.CookbookName = parsedTarget.CookbookName
+		target.CookbookVersion = parsedTarget.CookbookVersion
 		target.RSAPrivateKey = parsedTarget.RSAPrivateKey
 		target.RSAPublicKey = parsedTarget.RSAPublicKey
 		target.SpaceKey = parsedTarget.SpaceKey

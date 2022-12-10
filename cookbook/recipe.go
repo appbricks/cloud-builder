@@ -8,9 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
-
-	"github.com/otiai10/copy"
 
 	"github.com/appbricks/cloud-builder/terraform"
 	"github.com/mevansam/goforms/config"
@@ -49,7 +46,10 @@ type Recipe interface {
 
 	BackendType() string
 
-	CookbookTimestamp() string
+	CookbookName() string
+	CookbookVersion() string
+	RecipeName() string
+	RecipeIaaS() string
 }
 
 type Variable struct {
@@ -75,18 +75,23 @@ type recipe struct {
 	tfConfigPath,
 	tfPluginPath,
 	tfCLIPath,
-	workingDirectory,
-	cookbookTimestamp string
+	workingDirectory,	
+	cookbookName,
+	cookbookVersion,
+	recipeName,
+	recipeIaaS string
 }
 
 func NewRecipe(
-	name,
-	iaas,
+	recipeKey,
+	recipeIaaS,
 	tfConfigPath,
 	tfPluginPath,
 	tfCLIPath,
 	workingDirectory,
-	cookbookTimestamp string,
+	cookbookName,
+	cookbookVersion,
+	recipeName string,
 ) (Recipe, error) {
 
 	var (
@@ -95,7 +100,11 @@ func NewRecipe(
 
 	// load terraform configuration
 	reader := terraform.NewConfigReader()
-	if err = reader.ReadMetadata(name, iaas, tfConfigPath); err != nil {
+	if err = reader.ReadMetadata(
+		recipeKey, 
+		recipeIaaS, 
+		tfConfigPath,
+	); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +126,10 @@ func NewRecipe(
 		tfCLIPath:        tfCLIPath,
 		workingDirectory: workingDirectory,
 
-		cookbookTimestamp: cookbookTimestamp,
+		cookbookName:    cookbookName,
+		cookbookVersion: cookbookVersion,
+		recipeName:      recipeName,
+		recipeIaaS:      recipeIaaS,
 	}
 	for _, f := range reader.InputForm().InputFields() {
 		recipe.variables[f.Name()] = &Variable{
@@ -260,32 +272,6 @@ func (r *recipe) linkRecipeAsset(recipePath, runLink string) error {
 		"Linking recipe runtime assets: %s => %s",
 		recipePath, runLink)
 
-	link := func(linkSrc, linkDest string) error {
-
-		if runtime.GOOS == "windows" {
-			// terraform does not follow symlinks in
-			// windows so make physical copy of provider					
-			if err = copy.Copy(
-				linkSrc, 
-				linkDest, 
-				copy.Options{
-					OnSymlink: func(src string) copy.SymlinkAction {
-						return copy.Deep
-					},
-				},
-			); err != nil {
-				return err
-			}
-
-		} else {
-			os.Remove(linkDest)
-			if err = os.Symlink(linkSrc, linkDest); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
 	if fiSrc, err = os.Stat(recipePath); !os.IsNotExist(err) {
 		if fiSrc.Mode().IsDir() {
 
@@ -307,7 +293,7 @@ func (r *recipe) linkRecipeAsset(recipePath, runLink string) error {
 				if fiDest, err = os.Stat(dest); os.IsNotExist(err) ||
 					fiSrc.ModTime().After(fiDest.ModTime()) {
 					
-					if err = link(src, dest); err != nil {
+					if err = utils.LinkPaths(src, dest); err != nil {
 						return err
 					}
 				}
@@ -318,7 +304,7 @@ func (r *recipe) linkRecipeAsset(recipePath, runLink string) error {
 				fiSrc.ModTime().After(fiDest.ModTime()) {
 				
 				// make a direct link
-				if err = link(recipePath, runLink); err != nil {
+				if err = utils.LinkPaths(recipePath, runLink); err != nil {
 					return err
 				}
 			}
@@ -408,10 +394,26 @@ func (r *recipe) BackendType() string {
 	return r.backendType
 }
 
-// out: the version timestamp of the cookbook this recipe is
+// out: the name of the cookbook this recipe is
 //      associated with.
-func (r *recipe) CookbookTimestamp() string {
-	return r.cookbookTimestamp
+func (r *recipe) CookbookName() string {
+	return r.cookbookName
+}
+
+// out: the version of the cookbook this recipe is
+//      associated with.
+func (r *recipe) CookbookVersion() string {
+	return r.cookbookVersion
+}
+
+// out: the name of the cookbook recipe
+func (r *recipe) RecipeName() string {
+	return r.recipeName
+}
+
+// out: the name of the cookbook recipe's iaas
+func (r *recipe) RecipeIaaS() string {
+	return r.recipeIaaS
 }
 
 // interface: config/Config functions for base cloud provider
@@ -481,7 +483,10 @@ func (r *recipe) Copy() (config.Configurable, error) {
 		tfCLIPath:        r.tfCLIPath,
 		workingDirectory: r.workingDirectory,
 
-		cookbookTimestamp: r.cookbookTimestamp,
+		cookbookName:    r.cookbookName,
+		cookbookVersion: r.cookbookVersion,
+		recipeName:      r.recipeName,
+		recipeIaaS:      r.recipeIaaS,
 	}
 
 	for k, v := range r.variables {

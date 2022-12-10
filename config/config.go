@@ -104,7 +104,7 @@ type TargetContext interface {
 	GetCloudProvider(iaas string) (provider.CloudProvider, error)
 	SaveCloudProvider(provider provider.CloudProvider)
 
-	NewTarget(recipeName, recipeIaas string) (*target.Target, error)
+	NewTarget(recipeKey, recipeIaas string) (*target.Target, error)
 	TargetSet() *target.TargetSet
 	HasTarget(name string) bool
 	GetTarget(name string) (*target.Target, error)
