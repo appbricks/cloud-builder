@@ -173,21 +173,22 @@ func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
 
 	var (
 		err error
-		ok  bool
-
-		cm *CookbookMetadata		
-		r  Recipe
 	)
 
 	// Updates cookbook metadata
 	addMetadata := func(file string) error {
 
 		var (
+			err error
+			ok  bool
+
+			recipeKey string
+
+			r  Recipe
 			rr map[string]Recipe
 
 			data []byte
-
-			recipeKey string
+			cm   *CookbookMetadata		
 		)
 
 		if match := recipePathMatcher.Match([]byte(file)); match {
@@ -249,6 +250,7 @@ func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
 					metadata.CookbookVersion,
 					recipeName,
 				); err != nil {
+					logger.ErrorMessage("Error loading recipe '%s/%s': %s", recipeKey, recipeIaaS, err.Error())
 					return err
 				}
 				c.mx.Lock()
@@ -262,7 +264,6 @@ func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
 		return nil
 	}
 
-	errs := []error{}
 	pathPrefixLen := len(cookbookRoot) + 1
 	
 	if err = filepath.WalkDir(recipesPath,
@@ -279,7 +280,9 @@ func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
 					defer c.init.Done()						
 					
 					if err = addMetadata(filepath); err != nil {
-						errs = append(errs, err)
+						c.mx.Lock()
+						c.errs = append(c.errs, err)
+						c.mx.Unlock()
 					}	
 				}()
 			}
