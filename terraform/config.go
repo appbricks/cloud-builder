@@ -10,11 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform/configs"
-	"github.com/zclconf/go-cty/cty"
-	"github.com/zclconf/go-cty/cty/gocty"
-
-	hcl "github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/terraform-config-inspect/tfconfig"
 
 	"github.com/mevansam/gocloud/backend"
 	"github.com/mevansam/gocloud/provider"
@@ -138,9 +134,8 @@ func (r *configReader) ReadMetadata(
 
 		errMessage strings.Builder
 
-		parser *configs.Parser
-		module *configs.Module
-		hdiag  hcl.Diagnostics
+		module *tfconfig.Module
+		diags  tfconfig.Diagnostics
 
 		cloudProvider provider.CloudProvider
 
@@ -161,12 +156,11 @@ func (r *configReader) ReadMetadata(
 	}
 
 	// load terraform module
-	parser = configs.NewParser(nil)
-	module, hdiag = parser.LoadConfigDir(configPath)
-	if hdiag != nil {
+	module, diags = tfconfig.LoadModule(configPath)
+	if diags != nil {
 
-		for _, d := range hdiag {
-			if d.Severity == hcl.DiagWarning {
+		for _, d := range diags {
+			if d.Severity == tfconfig.DiagWarning {
 				logger.DebugMessage("WARNING! %s (%s)", d.Summary, d.Detail)
 			} else {
 				errMessage.WriteString(fmt.Sprintf("%s (%s); ", d.Summary, d.Detail))
@@ -182,11 +176,11 @@ func (r *configReader) ReadMetadata(
 	}
 
 	// check if recipe backend type is supported
-	if module.Backend != nil {
-		if !backend.IsValidCloudBackend(module.Backend.Type) {
-			return fmt.Errorf("backend type '%s' is not supported", module.Backend.Type)
+	if module.BackendConfig != nil {
+		r.backendType = module.BackendConfig.Name
+		if !backend.IsValidCloudBackend(r.backendType) {
+			return fmt.Errorf("backend type '%s' is not supported", r.backendType)
 		}
-		r.backendType = module.Backend.Type
 	}
 
 	l := len(module.Variables)
@@ -197,7 +191,7 @@ func (r *configReader) ReadMetadata(
 
 		logger.TraceMessage(
 			"Loading metadata for terraform variable declared in template file '%s':\n%# v",
-			tfVar.DeclRange.Filename, tfVar)
+			tfVar.Pos.Filename, tfVar)
 
 		if vm, err = r.readVariableMetadata(tfVar); err != nil {
 			return err
@@ -287,7 +281,7 @@ func (r *configReader) ReadMetadata(
 // read variable metadata for variable declared
 // in the given file and line number
 func (r *configReader) readVariableMetadata(
-	tfVar *configs.Variable,
+	tfVar *tfconfig.Variable,
 ) (
 	*variableMetadata, error,
 ) {
@@ -314,7 +308,7 @@ func (r *configReader) readVariableMetadata(
 		defaultValue: "",
 
 		/// validation
-		typeName:             tfVar.Type.FriendlyName(),
+		typeName:             tfVar.Type,
 		acceptedValues:       []string{},
 		valueInclusionFilter: "",
 		valueExclusionFilter: "",
@@ -323,30 +317,26 @@ func (r *configReader) readVariableMetadata(
 		sensitive:            false,
 
 		order:      maxint,
-		fileName:   strings.TrimSuffix(filepath.Base(tfVar.DeclRange.Filename), ".tf"),
-		lineNumber: tfVar.DeclRange.Start.Line,
+		fileName:   strings.TrimSuffix(filepath.Base(tfVar.Pos.Filename), ".tf"),
+		lineNumber: tfVar.Pos.Line,
 	}
 
 	// get default value from variable
 	// declaration in template
-	if !tfVar.Default.IsNull() {
+	if tfVar.Default != nil {
 		vm.optional = true
 
-		switch tfVar.Default.Type() {
-		case cty.Bool:
-			var val bool
-			err = gocty.FromCtyValue(tfVar.Default, &val)
-			if err == nil {
-				vm.defaultValue = strconv.FormatBool(val)
-			}
-		case cty.Number:
-			var val int64
-			err = gocty.FromCtyValue(tfVar.Default, &val)
-			if err == nil {
-				vm.defaultValue = strconv.FormatInt(val, 10)
-			}
+		switch tfVar.Default.(type) {
+		case string:
+			vm.defaultValue = tfVar.Default.(string)
+		case bool:
+			vm.defaultValue = strconv.FormatBool(tfVar.Default.(bool))
+		case int, int64, uint, uint64, float32, float64:
+			vm.defaultValue = fmt.Sprintf("%g", tfVar.Default)
 		default:
-			err = gocty.FromCtyValue(tfVar.Default, &vm.defaultValue)
+			// need to handle more complex types such as objects, 
+			// arrays and maps. for now force string.
+			vm.defaultValue = fmt.Sprintf("%s", tfVar.Default)
 		}
 		if err != nil {
 			return nil, err
@@ -356,7 +346,7 @@ func (r *configReader) readVariableMetadata(
 	if ll, exists = r.templatesWithVars[vm.fileName]; !exists {
 		// scan file for non-variable specific annotations
 
-		if f, err = os.Open(tfVar.DeclRange.Filename); err != nil {
+		if f, err = os.Open(tfVar.Pos.Filename); err != nil {
 			return nil, err
 		}
 
@@ -470,7 +460,7 @@ func (r *configReader) readVariableMetadata(
 
 	logger.TraceMessage(
 		"Loaded variable declared in template file '%s':\n%# v",
-		tfVar.DeclRange.Filename, vm)
+		tfVar.Pos.Filename, vm)
 
 	return vm, nil
 }
