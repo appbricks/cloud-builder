@@ -46,7 +46,7 @@ var _ = Describe("Target", func() {
 
 		testRecipePath, err = filepath.Abs(fmt.Sprintf("%s/../test/fixtures/recipes/basic/aws", sourceDirPath))
 		Expect(err).NotTo(HaveOccurred())
-		r, err = cookbook.NewRecipe("basic", "aws", testRecipePath, "", "", "", "", "", "basic")
+		r, err = cookbook.NewRecipe("basic", "aws", testRecipePath, "", "", "", "test", "", "basic")
 		Expect(err).NotTo(HaveOccurred())
 
 		p, err = provider.NewCloudProvider("aws")
@@ -111,7 +111,7 @@ var _ = Describe("Target", func() {
 			err = json.Unmarshal([]byte(testTargetConfig), t)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(t.Key()).To(Equal("basic/aws/aa/"))
+			Expect(t.Key()).To(Equal("test:basic/aws/aa/"))
 			Expect(t.DeploymentName()).To(Equal("NONAME"))
 			Expect(t.RecipeName).To(Equal("basic"))
 			Expect(t.RecipeIaas).To(Equal("aws"))
@@ -125,6 +125,7 @@ var _ = Describe("Target", func() {
 })
 
 const expectedTargetConfig = `{
+	"cookbookName": "test",
   "recipeName": "basic",
 	"recipeIaas": "aws",
 	"dependentTargets": [],
@@ -173,11 +174,12 @@ const expectedTargetConfig = `{
 	},
 	"rsaPrivateKey": %q,
 	"rsaPublicKey": %q,
-	"spaceKey": "abcd",
-	"spaceID": "1234"
+	"nodeKey": "abcd",
+	"nodeID": "1234"
 }`
 
 const testTargetConfig = `{
+	"cookbookName": "test",
   "recipeName": "basic",
 	"recipeIaas": "aws",
 	"recipe": {

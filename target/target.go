@@ -26,7 +26,7 @@ import (
 )
 
 // Instance state callback
-type InstanceStateChange func(name string, instance cloud.ComputeInstance)
+type InstanceStateChange func(name string, instance *ManagedInstance)
 
 // Input types
 type TargetState int
@@ -99,6 +99,8 @@ type ManagedInstance struct {
 	fqdn,
 	publicIP,
 	privateIP,
+	hcPort,
+	hcType,
 	apiPort,
 	sshPort,
 	sshUser,
@@ -224,11 +226,11 @@ func (t *Target) Resume(cb InstanceStateChange) error {
 
 	if t.Status() == Shutdown {
 		for _, managedInstance := range t.managedInstances {
-			cb(managedInstance.name, managedInstance.Instance)
+			cb(managedInstance.name, managedInstance)
 			if err = managedInstance.Instance.Start(); err != nil {
 				return err
 			}
-			cb(managedInstance.name, managedInstance.Instance)
+			cb(managedInstance.name, managedInstance)
 		}
 	} else {
 		return fmt.Errorf("target is not in a 'shutdown' state")
@@ -245,11 +247,11 @@ func (t *Target) Suspend(cb InstanceStateChange) error {
 
 	if t.Status() == Running {
 		for _, managedInstance := range t.managedInstances {
-			cb(managedInstance.name, managedInstance.Instance)
+			cb(managedInstance.name, managedInstance)
 			if err = managedInstance.Instance.Stop(); err != nil {
 				return err
 			}
-			cb(managedInstance.name, managedInstance.Instance)
+			cb(managedInstance.name, managedInstance)
 		}
 	} else {
 		return fmt.Errorf("target is not in a 'shutdown' state")
@@ -459,6 +461,12 @@ func (t *Target) loadRemoteRefs() error {
 					return err
 				}
 				if instance.privateIP, err = readKeyValue("private_ip"); err != nil {
+					return err
+				}
+				if instance.hcPort, err = readKeyValue("health_check_port"); err != nil {
+					return err
+				}
+				if instance.hcType, err = readKeyValue("health_check_type"); err != nil {
 					return err
 				}
 				if instance.apiPort, err = readKeyValue("api_port"); err != nil {
@@ -795,9 +803,16 @@ func (i *ManagedInstance) FQDN() string {
 
 func (i *ManagedInstance) SSHAddress() string {
 	
-	publicIP := i.Instance.PublicIP()
-	if len(publicIP) == 0 {
-		publicIP = i.publicIP
+	var (
+		publicIP string
+	)
+
+	if len(i.publicIP) > 0 {
+		// get actual public IP (in cases where managed 
+		// instance is deployed using dynamic IP allocation)
+		if publicIP = i.Instance.PublicIP(); len(publicIP) == 0 {
+			publicIP = i.publicIP
+		}
 	}
 	if len(publicIP) > 0 {
 		return fmt.Sprintf("%s:%s", publicIP, i.sshPort)
@@ -908,4 +923,40 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 		return nil, "", err
 	}
 	return client, endpoint, nil	
+}
+
+func (i *ManagedInstance) State() (cloud.InstanceState, error) {
+	return i.Instance.State()
+}
+
+func (i *ManagedInstance) CanConnect() bool {
+
+	var (
+		err  error
+		port int
+	)
+
+	if len(i.hcPort) == 0 {
+		logger.WarnMessage(
+			"No health check will be done for managed instance '%s' as port not available.", 
+			i.name,
+		)
+	}
+	if port, err = strconv.Atoi(i.hcPort); err != nil {
+		logger.ErrorMessage(
+			"Invalid healthcheck port '%s' for managed instance '%s'.", 
+			i.hcPort, i.name,
+		)
+		return false
+	}
+	switch i.hcType {
+	case "tcp":
+		return i.Instance.CanConnect(port)
+	default:
+		logger.ErrorMessage(
+			"Unknown health check type '%s' provided for managed instance '%s'.", 
+			i.hcType, i.name,
+		)
+		return false
+	}
 }
