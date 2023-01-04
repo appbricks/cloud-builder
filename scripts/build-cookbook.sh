@@ -136,6 +136,7 @@ if [[ -z $recipe_project_uri ]]; then
 fi
 
 current_os=$(go env GOOS)
+current_arch=$(go env GOARCH)
 
 build_dir=${root_dir}/.build/cookbook
 recipe_repo_dir=${build_dir}/repos
@@ -294,11 +295,11 @@ for repo in $(ls ${recipe_repo_dir}); do
         fi
         if [[ ! -e ${provider_dist_path}/${provider_file_name} ]]; then
 
-          if [[ $target_os == $current_os ]]; then
+          if [[ $target_os == $current_os && $target_arch == $current_arch ]]; then
             cp $f ${provider_dist_path}
           else
             pushd ${provider_dist_path}
-            curl \
+            curl -f \
               -L https://releases.hashicorp.com/${provider_name}/${version}/${provider_name}_${version}_${target_os}_${target_arch}.zip \
               -o terraform-provider.zip
 
