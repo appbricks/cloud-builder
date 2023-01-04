@@ -442,7 +442,9 @@ func (c *Cookbook) importCookbook(cookbookPath string) error {
 					if err = os.MkdirAll(filepath.Dir(destPath), 0755); err == nil {
 						if err = utils.CopyFiles(p, destPath, 1024); err != nil {
 							os.Remove(destPath)
-						}	
+						}	else {
+							_ = os.Chmod(destPath, 0755)
+						}
 					}
 				}
 				if err != nil {
