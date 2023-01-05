@@ -13,6 +13,9 @@ type authContext struct {
 	// additional token data returned by derivative 
 	// oauth flows (i.e. cognito id_token)
 	Extra map[string]interface{} `json:"tokenExtra,omitempty"`
+
+	MyCSPublicKeyID string `json:"mycsPublicKeyID,omitempty"`
+	MyCSPublicKey   string `json:"mycsPublicKey,omitempty"`
 }
 
 func NewAuthContext() *authContext {
@@ -52,6 +55,15 @@ func (ac *authContext) SetToken(token *oauth2.Token) {
 
 func (ac *authContext) GetToken() *oauth2.Token {
 	return ac.Token
+}
+
+func (ac *authContext) SetPublicKey(keyID, key string) {
+	ac.MyCSPublicKeyID = keyID
+	ac.MyCSPublicKey = key
+}
+
+func (ac *authContext) GetPublicKey() (string, string) {
+	return ac.MyCSPublicKeyID, ac.MyCSPublicKey
 }
 
 func (ac *authContext) IsLoggedIn() bool {

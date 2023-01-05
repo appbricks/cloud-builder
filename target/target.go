@@ -612,32 +612,36 @@ func (t *Target) PrepareBackend() error {
 
 // returns a launcher for this target
 func (t *Target) NewBuilder(
+	buildVars map[string]string,
 	outputBuffer, 
 	errorBuffer io.Writer,
 ) (*Builder, error) {
 
-	additonalInputs := make(map[string]string)
 	if t.Recipe.IsBastion() {
-		additonalInputs["mycs_node_private_key"] = t.RSAPrivateKey
-		additonalInputs["mycs_node_id_key"] = t.NodeKey
+		buildVars["mycs_node_private_key"] = t.RSAPrivateKey
+		buildVars["mycs_node_id_key"] = t.NodeKey
+	} else {
+		buildVars["mycs_app_private_key"] = t.RSAPrivateKey
+		buildVars["mycs_app_id_key"] = t.NodeKey
 	}
+
 	for _, dt := range t.dependencies {
 		for name, output := range *dt.Output {
 			if name != "cb_managed_instances" {
 				
 				switch v := output.Value.(type) {
 				case bool:
-					additonalInputs[name] = strconv.FormatBool(v)
+					buildVars[name] = strconv.FormatBool(v)
 				case int:
-					additonalInputs[name] = strconv.Itoa(v)
+					buildVars[name] = strconv.Itoa(v)
 				case string:
-					additonalInputs[name] = v
+					buildVars[name] = v
 				default:
 					b, err := json.Marshal(v)
 					if err != nil {
 						return nil, err
 					}
-					additonalInputs[name] = string(b)
+					buildVars[name] = string(b)
 				}
 			}
 		}
@@ -648,7 +652,7 @@ func (t *Target) NewBuilder(
 		t.Recipe,
 		t.Provider,
 		t.Backend,
-		additonalInputs,
+		buildVars,
 		outputBuffer,
 		errorBuffer)
 }

@@ -518,6 +518,17 @@ func (cf *configFile) SetLoggedInUser(userID, userName string) error {
 	return nil
 }
 
+func (cf *configFile) ContextVars() map[string]string {
+
+	contextVars := make(map[string]string)
+
+	keyID, keyData := cf.authContext.GetPublicKey()
+	contextVars["mycs_cloud_public_key_id"] = keyID
+	contextVars["mycs_cloud_public_key"] = keyData
+
+	return contextVars
+}
+
 func init() {
 
 	// retrieve the program executable's timestamp

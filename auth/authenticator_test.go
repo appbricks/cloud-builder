@@ -3,7 +3,6 @@ package auth_test
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -137,7 +136,7 @@ var _ = Describe("Authenticator", func() {
 			// check if callback server can serve a test response
 			resp, err := http.Get("http://localhost:9094/test")
 			Expect(err).ToNot(HaveOccurred())
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.Status).To(Equal("200 OK"))
 			Expect(string(body)).To(Equal("test"))
@@ -150,7 +149,7 @@ var _ = Describe("Authenticator", func() {
 				resp, err := http.Get(authUrl)
 				Expect(err).ToNot(HaveOccurred())
 				defer resp.Body.Close()
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.Status).To(Equal("200 OK"))
 				Expect(string(body)).To(Equal("authorized"))	
@@ -284,6 +283,8 @@ func startOAuthTestServer(serverExit *sync.WaitGroup) *http.Server {
 
 type TestAuthContext struct {
 	token *oauth2.Token
+
+	pkID, pkData string
 }
 
 func (ac *TestAuthContext) Reset() error {
@@ -305,6 +306,15 @@ func (ac *TestAuthContext) SetToken(token *oauth2.Token) {
 
 func (ac *TestAuthContext) GetToken() *oauth2.Token {
 	return ac.token
+}
+
+func (ac *TestAuthContext) SetPublicKey(keyID, key string) {
+	ac.pkID = keyID
+	ac.pkData = key
+}
+
+func (ac *TestAuthContext) GetPublicKey() (string, string) {
+	return ac.pkID, ac.pkData
 }
 
 func (ac *TestAuthContext) SetLoggedInUser(userID, userName string) {

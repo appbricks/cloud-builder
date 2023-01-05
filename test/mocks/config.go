@@ -86,3 +86,14 @@ func (mc *MockConfig) SetLoggedInUser(userID, userName string) error {
 	}
 	return nil
 }
+
+func (mc *MockConfig) ContextVars() map[string]string {
+
+	contextVars := make(map[string]string)
+
+	keyID, keyData := mc.authContext.GetPublicKey()
+	contextVars["mycs_cloud_public_key_id"] = keyID
+	contextVars["mycs_cloud_public_key"] = keyData
+
+	return contextVars
+}

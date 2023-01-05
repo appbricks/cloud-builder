@@ -37,6 +37,8 @@ type Config interface {
 	TargetContext() TargetContext
 
 	SetLoggedInUser(userID, userName string) error
+
+	ContextVars() map[string]string
 }
 
 // provides an interface for saving and retrieving an oauth token
@@ -48,6 +50,9 @@ type AuthContext interface {
 
 	SetToken(token *oauth2.Token)
 	GetToken() *oauth2.Token
+
+	SetPublicKey(keyID, keyData string)
+	GetPublicKey() (string, string)
 
 	IsLoggedIn() bool
 }
