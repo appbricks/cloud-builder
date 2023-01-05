@@ -933,12 +933,13 @@ func (i *ManagedInstance) State() (cloud.InstanceState, error) {
 	return i.Instance.State()
 }
 
-func (i *ManagedInstance) CanConnect() bool {
+func (i *ManagedInstance) CanConnect() (bool, error) {
 
 	var (
 		err  error
 		port int
 	)
+	connError := fmt.Errorf("unable to determine connectivity state for instance")
 
 	if len(i.hcPort) == 0 {
 		logger.WarnMessage(
@@ -951,16 +952,16 @@ func (i *ManagedInstance) CanConnect() bool {
 			"Invalid healthcheck port '%s' for managed instance '%s'.", 
 			i.hcPort, i.name,
 		)
-		return false
+		return false, connError
 	}
 	switch i.hcType {
 	case "tcp":
-		return i.Instance.CanConnect(port)
+		return i.Instance.CanConnect(port), nil
 	default:
 		logger.ErrorMessage(
 			"Unknown health check type '%s' provided for managed instance '%s'.", 
 			i.hcType, i.name,
 		)
-		return false
+		return false, connError
 	}
 }
