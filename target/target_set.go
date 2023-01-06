@@ -132,6 +132,7 @@ func (ts *TargetSet) SaveTarget(key string, target *Target) error {
 				)
 			}
 			target.dependencies = append(target.dependencies, t)
+			t.dependents++
 		}
 	}
 
@@ -220,6 +221,7 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 				continue OUTER
 			}
 			target.dependencies = append(target.dependencies, t)
+			t.dependents++
 		}
 		ts.targets[target.Key()] = target
 	}

@@ -63,6 +63,7 @@ type Target struct {
 	NodeID  string `json:"nodeID,omitempty"`
 
 	dependencies []*Target
+	dependents int
 
 	description string
 	version     string
@@ -181,6 +182,10 @@ func (t *Target) DeploymentName() string {
 
 func (t *Target) Dependencies() []*Target {
 	return t.dependencies
+}
+
+func (t *Target) HasDependents() bool {
+	return t.dependents > 0
 }
 
 func (t *Target) UpdateKeys() (*Target, error) {
@@ -581,6 +586,7 @@ func (t *Target) Copy() (*Target, error) {
 		NodeID: t.NodeID,
 
 		dependencies: t.dependencies,
+		dependents: t.dependents,
 
 	}, nil
 }
