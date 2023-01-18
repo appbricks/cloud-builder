@@ -156,7 +156,7 @@ mkdir -p $bin_dir
 terraform=${bin_dir}/terraform
 if [[ ! -e $terraform ]]; then
   curl \
-    -L https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_${current_os}_${target_arch}.zip \
+    -L https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_${current_os}_${current_arch}.zip \
     -o ${bin_dir}/terraform.zip
 
   pushd $bin_dir
@@ -269,6 +269,8 @@ for repo in $(ls ${recipe_repo_dir}); do
       # download the dependent providers and modules
       pushd $recipe_folder
       $terraform init -backend=false
+      rm .terraform.lock.hcl
+      $terraform providers lock -platform ${target_os}_${target_arch}
       popd
 
       # consolidate terraform providers to
