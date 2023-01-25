@@ -141,6 +141,7 @@ current_arch=$(go env GOARCH)
 build_dir=${root_dir}/.build/cookbook
 recipe_repo_dir=${build_dir}/repos
 bin_dir=${build_dir}/bin
+plugin_mirror_dir=${build_dir}/bin/plugins
 dist_dir=${build_dir}/dist/${target_os}_${target_arch}
 dest_dist_dir=${HOME_DIR:-$home_dir}/dist
 cookbook_bin_dir=${dist_dir}/bin
@@ -271,45 +272,27 @@ for repo in $(ls ${recipe_repo_dir}); do
       $terraform init -backend=false
       rm .terraform.lock.hcl
       $terraform providers lock -platform ${target_os}_${target_arch}
+      rm -fr $plugin_mirror_dir
+      $terraform providers mirror -platform ${target_os}_${target_arch} $plugin_mirror_dir
       popd
 
       # consolidate terraform providers to
       # the distribution's provider folder
       # downloading os specific binaries
       # if os is different to build os
-      for f in $(find ${recipe_folder}/.terraform/providers -name 'terraform-provider-*' -print); do
-        abs_dir_path=$(dirname $(dirname $f))
-        provider_path=${abs_dir_path#${recipe_folder}/.terraform/providers/*}
-        provider_dist_path=${cookbook_plugins_dir}/${provider_path}/${target_os}_${target_arch}
+      for f in $(find $plugin_mirror_dir -name "terraform-provider-*_${target_os}_${target_arch}.zip" -print); do
+        abs_dir_path=$(dirname $f)
+        provider_filename=$(basename $f)
+        provider_version=$(echo "$provider_filename" | sed -e "s|.*_\([0-9]*\(\.[0-9]*\)*\)_${target_os}_${target_arch}.zip|\1|")
+        provider_path=${abs_dir_path#${plugin_mirror_dir}/*}
+        provider_dist_path=${cookbook_plugins_dir}/${provider_path}/${provider_version}/${target_os}_${target_arch}
         mkdir -p $provider_dist_path
-        
-        name=$(basename $f)
-        name_x=x${name#*_x*}
-        name=${name%*_x*}
-        provider_name=${name%%_*}
-        version=${name#*_}
-        version=${version#v*}
 
-        if [[ $target_os == windows ]]; then
-          provider_file_name=${provider_name}_v${version}_${name_x}.exe
-        else
-          provider_file_name=${provider_name}_v${version}_${name_x}
-        fi
-        if [[ ! -e ${provider_dist_path}/${provider_file_name} ]]; then
-
-          if [[ $target_os == $current_os && $target_arch == $current_arch ]]; then
-            cp $f ${provider_dist_path}
-          else
-            pushd ${provider_dist_path}
-            curl -f \
-              -L https://releases.hashicorp.com/${provider_name}/${version}/${provider_name}_${version}_${target_os}_${target_arch}.zip \
-              -o terraform-provider.zip
-
-            unzip -o terraform-provider.zip
-            rm terraform-provider.zip
-            popd
-          fi
-        fi
+        mv $f $provider_dist_path
+        pushd $provider_dist_path
+        unzip -o $provider_filename
+        rm $provider_filename
+        popd
       done
 
       rm -fr ${cookbook_recipes_dir}/${recipe}/${iaas}
