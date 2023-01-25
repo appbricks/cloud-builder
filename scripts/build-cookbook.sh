@@ -27,6 +27,9 @@ usage () {
   echo -e "       --cookbook-name    <COOKBOOK NAME>        The cookbook name"
   echo -e "       --cookbook-desc    <COOKBOOK DESCRIPTION> A description for the cookbook"
   echo -e "       --cookbook-version <COOKBOOK VERSION>     The version of the cookbook"
+  echo -e "       --env-arg          <NAME>=<VALUE>         Default cookbook environment variables applied before a"
+  echo -e "                                                 cookbook recipe is deployed via Terraform. This argument can"
+  echo -e "                                                 provied multiple times to add one or more variables."
   echo -e "    -o|--os-name          <TARGET OS>            The target OS for which recipe providers should be download."
   echo -e "                                                 Should be one of \"darwin\", \"linux\" or \"windows\"."
   echo -e "    -a|--os-arch          <TARGET OS ARCH>       The target OS architecture."
@@ -43,6 +46,8 @@ recipe_git_branch_or_tag=master
 recipe_iaas=""
 target_os=$(go env GOOS)
 target_arch=$(go env GOARCH)
+
+env_args=()
 
 cookbook_dest_dir=${HOME_DIR:-${root_dir}/cookbook}/dist
 
@@ -85,6 +90,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --cookbook-version)
       cookbook_version=$2
+      shift
+      ;;
+    --env-arg)
+      env_args+=("$2")
       shift
       ;;
     -o|--os-name)
@@ -311,13 +320,35 @@ terraform_version=$($terraform version | awk '/^Terraform v/{ print substr($2, 2
 
 cat << ---EOF > METADATA
 ---
-cookbook-name: '$cookbook_name'
-cookbook-version: '$cookbook_version'
-description: '$cookbook_desc'
-terraform-version: '$terraform_version'
-target-os-name: '$target_os'
-target-os-arch: '$target_arch'
+cookbook-name: '${cookbook_name}'
+cookbook-version: '${cookbook_version}'
+description: '${cookbook_desc}'
+terraform-version: '${terraform_version}'
+target-os-name: '${target_os}'
+target-os-arch: '${target_arch}'
 ---EOF
+
+if [[ ${#env_args[@]} > 0 ]]; then
+
+  cat << ---EOF >> METADATA
+env-args:
+---EOF
+
+  for a in ${env_args[@]}; do
+    arg_name=${a%%=*}
+    arg_value=${a#*=}
+
+    cat << ---EOF >> METADATA
+  - [ '${arg_name}', '${arg_value}' ]
+---EOF
+
+  done
+
+else
+  cat << ---EOF >> METADATA
+env-args: []
+---EOF
+fi
 
 if [[ -n $template_only ]]; then
   zip -ur $cookbook_dist_zip . -x "*.git*" -x "bin/terraform"
