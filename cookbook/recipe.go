@@ -50,6 +50,8 @@ type Recipe interface {
 	CookbookVersion() string
 	RecipeName() string
 	RecipeIaaS() string
+
+	AddEnvVars(vars map[string]string)
 }
 
 type Variable struct {
@@ -71,7 +73,8 @@ type recipe struct {
 
 	backendType string
 
-	// Paths to terraform templates and workspace
+	// recipe metadata
+
 	tfConfigPath,
 	tfPluginPath,
 	tfCLIPath,
@@ -80,6 +83,8 @@ type recipe struct {
 	cookbookVersion,
 	recipeName,
 	recipeIaaS string
+
+	recipeEnvVars [][]string
 }
 
 func NewRecipe(
@@ -92,6 +97,7 @@ func NewRecipe(
 	cookbookName,
 	cookbookVersion,
 	recipeName string,
+	recipeEnvVars [][]string,
 ) (Recipe, error) {
 
 	var (
@@ -130,6 +136,7 @@ func NewRecipe(
 		cookbookVersion: cookbookVersion,
 		recipeName:      recipeName,
 		recipeIaaS:      recipeIaaS,
+		recipeEnvVars:   recipeEnvVars,
 	}
 	for _, f := range reader.InputForm().InputFields() {
 		recipe.variables[f.Name()] = &Variable{
@@ -416,6 +423,13 @@ func (r *recipe) RecipeIaaS() string {
 	return r.recipeIaaS
 }
 
+// out: default environment vars for the recipe
+func (r *recipe) AddEnvVars(vars map[string]string) {
+	for _, v := range r.recipeEnvVars {
+		vars[v[0]] = v[1]
+	}
+}
+
 // interface: config/Config functions for base cloud provider
 
 func (r *recipe) Name() string {
@@ -487,6 +501,7 @@ func (r *recipe) Copy() (config.Configurable, error) {
 		cookbookVersion: r.cookbookVersion,
 		recipeName:      r.recipeName,
 		recipeIaaS:      r.recipeIaaS,
+		recipeEnvVars:   r.recipeEnvVars,
 	}
 
 	for k, v := range r.variables {

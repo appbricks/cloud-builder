@@ -131,3 +131,6 @@ func (f *FakeRecipe) RecipeName() string {
 func (f *FakeRecipe) RecipeIaaS() string {
 	return "fakeiaas"
 }
+
+func (f *FakeRecipe) AddEnvVars(vars map[string]string) {
+}

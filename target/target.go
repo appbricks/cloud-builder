@@ -630,6 +630,7 @@ func (t *Target) NewBuilder(
 		buildVars["mycs_app_private_key"] = t.RSAPrivateKey
 		buildVars["mycs_app_id_key"] = t.NodeKey
 	}
+	t.Recipe.AddEnvVars(buildVars)
 
 	for _, dt := range t.dependencies {
 		for name, output := range *dt.Output {

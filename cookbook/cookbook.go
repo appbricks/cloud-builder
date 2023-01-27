@@ -65,6 +65,8 @@ type CookbookMetadata struct {
 	TargetOsName     string `yaml:"target-os-name"`
 	TargetOsArch     string `yaml:"target-os-arch"`
 
+	EnvVars [][]string `yaml:"env-args"`
+
 	Imported bool
 	Recipes  []string
 
@@ -249,6 +251,7 @@ func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
 					metadata.CookbookName,
 					metadata.CookbookVersion,
 					recipeName,
+					metadata.EnvVars,
 				); err != nil {
 					logger.ErrorMessage("Error loading recipe '%s/%s': %s", recipeKey, recipeIaaS, err.Error())
 					return err
