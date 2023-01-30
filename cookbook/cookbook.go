@@ -155,11 +155,9 @@ func NewCookbook(
 				if newCoreCookbook {
 					err = c.importCookbook(icpath)
 
-				} else {
+				} else if vbytes, err = os.ReadFile(filepath.Join(icpath, "CURRENT")); err == nil {
 					vpath := filepath.Join(icpath, strings.TrimSpace(string(vbytes[:])))
-					if vbytes, err = os.ReadFile(filepath.Join(icpath, "CURRENT")); err == nil {
-						err = c.addRecipeMetadata(vpath, filepath.Join(vpath, "recipes"))
-					}					
+					err = c.addRecipeMetadata(vpath, filepath.Join(vpath, "recipes"))
 				}
 				if err != nil {
 					return nil, err
