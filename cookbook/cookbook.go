@@ -95,6 +95,7 @@ func NewCookbook(
 		importedCookbooks []os.DirEntry
 		vbytes            []byte
 	)
+	newCoreCookbook := false
 
 	if ts, err = box.FindString(cookbookModTime); err != nil {
 		return nil, err
@@ -123,6 +124,8 @@ func NewCookbook(
 		}
 		info, _ = os.Stat(c.path)
 		logger.TraceMessage("Unzipped cookbook to %s:\n  %s\n\n", c.path, strings.Join(c.files, "\n  "))
+
+		newCoreCookbook = true
 	}
 	if info.IsDir() {
 
@@ -149,11 +152,16 @@ func NewCookbook(
 		if importedCookbooks, err = os.ReadDir(importedPath); err == nil {
 			for _, ic := range importedCookbooks {
 				icpath := filepath.Join(importedPath, ic.Name())
-				if vbytes, err = os.ReadFile(filepath.Join(icpath, "CURRENT")); err != nil {
-					return nil, err
+				if newCoreCookbook {
+					err = c.importCookbook(icpath)
+
+				} else {
+					vpath := filepath.Join(icpath, strings.TrimSpace(string(vbytes[:])))
+					if vbytes, err = os.ReadFile(filepath.Join(icpath, "CURRENT")); err == nil {
+						err = c.addRecipeMetadata(vpath, filepath.Join(vpath, "recipes"))
+					}					
 				}
-				vpath := filepath.Join(icpath, strings.TrimSpace(string(vbytes[:])))
-				if err = c.addRecipeMetadata(vpath, filepath.Join(vpath, "recipes")); err != nil {
+				if err != nil {
 					return nil, err
 				}
 			}
