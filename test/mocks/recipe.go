@@ -57,6 +57,10 @@ func (f *FakeRecipe) PluginPath() string {
 	return "/fake/providerpath"
 }
 
+func (f *FakeRecipe) StatePath() string {
+	return "/fake/statepath"
+}
+
 func (f *FakeRecipe) GetKeyFieldValues() []string {
 	return nil
 }

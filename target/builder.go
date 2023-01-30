@@ -61,14 +61,18 @@ func NewBuilder(
 	}
 
 	builder := &Builder{
-		recipe:   recipe,
-		provider: cloudProvider.(provider.CloudProvider),
-		backend:  cloudBackend.(backend.CloudBackend),
-
+		recipe: recipe,
+		
 		additonalInputs: additonalInputs,
 
 		cli:          cli,
 		configInputs: make(map[string]terraform.Input),
+	}
+	if cloudProvider != nil {
+		builder.provider = cloudProvider.(provider.CloudProvider)
+	}
+	if cloudBackend != nil {
+		builder.backend = cloudBackend.(backend.CloudBackend)
 	}
 
 	for _, variable := range recipe.GetVariables() {
@@ -93,27 +97,16 @@ func (b *Builder) newRunner() (*terraform.Runner, error) {
 }
 
 func (b *Builder) setEnvVars(runner *terraform.Runner) error {
-
+	
 	var (
 		err error
-
-		inputForm  forms.InputForm
-		inputField *forms.InputField
-
-		value *string
-		vars  map[string]string
 	)
+	vars := make(map[string]string)
 
 	// set environment variables
-	if inputForm, err = b.provider.InputForm(); err != nil {
-		return err
-	}
-	vars = make(map[string]string)
-	for _, inputField = range inputForm.InputFields() {
-		if value = inputField.Value(); value != nil {
-			for _, envVar := range inputField.EnvVars() {
-				vars[envVar] = *value
-			}
+	if b.provider != nil {
+		if err = b.provider.GetVars(vars); err != nil {
+			return err
 		}
 	}
 	// add additional inputs as TF_VAR_* environment variables
@@ -181,32 +174,19 @@ func (b *Builder) Initialize() error {
 		err error
 
 		runner *terraform.Runner
-
-		inputForm  forms.InputForm
-		inputField *forms.InputField
-
-		value *string
-		vars  map[string]string
+		vars   map[string]string
 	)
+	vars = make(map[string]string)
 
 	if runner, err = b.newRunner(); err != nil {
 		return err
 	}
 
 	// set backend arguments
-	if inputForm, err = b.backend.InputForm(); err != nil {
-		return err
-	}
-	vars = make(map[string]string)
-	for _, inputField = range inputForm.InputFields() {
-
-		if value = inputField.Value(); value == nil {
-			return fmt.Errorf(
-				"backend '%s' input field '%s' was nil",
-				b.backend.Name(),
-				inputField.Name())
+	if b.backend != nil {
+		if err = b.backend.GetVars(vars); err != nil {
+			return err
 		}
-		vars[inputField.Name()] = *value
 	}
 	runner.SetBackend(vars)
 

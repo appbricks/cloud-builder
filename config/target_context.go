@@ -319,9 +319,11 @@ func (cc *targetContext) GetCloudProvider(iaas string) (provider.CloudProvider, 
 	)
 
 	if p, ok = cc.providers[iaas]; !ok {
-		return nil, fmt.Errorf(
-			"provider for iaas '%s' does not exist",
-			iaas)
+		logger.DebugMessage(
+			"A cloud provider for iaas '%s' does not exist so a null provider will be used.",
+			iaas,
+		)
+		return provider.NewCloudProvider(iaas)
 	}
 	if copy, err = p.Copy(); err != nil {
 		return nil, err
@@ -383,6 +385,11 @@ func (cc *targetContext) NewTarget(
 		if backendCopy, err = cc.GetCloudBackend(backendType); err != nil {
 			return nil, err
 		}
+		backendCopy.SetProperties(
+			backend.CloudBackendProperties{
+				StatePath: recipeCopy.StatePath(),
+			},
+		)
 	}
 
 	return target.NewTarget(

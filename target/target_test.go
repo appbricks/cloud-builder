@@ -46,7 +46,7 @@ var _ = Describe("Target", func() {
 
 		testRecipePath, err = filepath.Abs(fmt.Sprintf("%s/../test/fixtures/recipes/basic/aws", sourceDirPath))
 		Expect(err).NotTo(HaveOccurred())
-		r, err = cookbook.NewRecipe("basic", "aws", testRecipePath, "", "", "", "test", "", "basic", [][]string{})
+		r, err = cookbook.NewRecipe("basic", "aws", testRecipePath, "", "", "", "", "test", "", "basic", [][]string{})
 		Expect(err).NotTo(HaveOccurred())
 
 		p, err = provider.NewCloudProvider("aws")

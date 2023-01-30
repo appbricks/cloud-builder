@@ -35,6 +35,7 @@ type Recipe interface {
 
 	ConfigPath() string
 	PluginPath() string
+	StatePath() string
 
 	GetVariable(name string) (*Variable, bool)
 	GetVariables() []*Variable
@@ -77,6 +78,7 @@ type recipe struct {
 
 	tfConfigPath,
 	tfPluginPath,
+	tfStatePath,
 	tfCLIPath,
 	workingDirectory,	
 	cookbookName,
@@ -92,6 +94,7 @@ func NewRecipe(
 	recipeIaaS,
 	tfConfigPath,
 	tfPluginPath,
+	tfStatePath,
 	tfCLIPath,
 	workingDirectory,
 	cookbookName,
@@ -129,6 +132,7 @@ func NewRecipe(
 
 		tfConfigPath:     tfConfigPath,
 		tfPluginPath:     tfPluginPath,
+		tfStatePath:       tfStatePath,
 		tfCLIPath:        tfCLIPath,
 		workingDirectory: workingDirectory,
 
@@ -329,6 +333,10 @@ func (r *recipe) PluginPath() string {
 	return r.tfPluginPath
 }
 
+func (r *recipe) StatePath() string {
+	return r.tfStatePath
+}
+
 func (r *recipe) GetVariable(name string) (*Variable, bool) {
 
 	var (
@@ -494,6 +502,7 @@ func (r *recipe) Copy() (config.Configurable, error) {
 
 		tfConfigPath:     r.tfConfigPath,
 		tfPluginPath:     r.tfPluginPath,
+		tfStatePath:      r.tfStatePath,
 		tfCLIPath:        r.tfCLIPath,
 		workingDirectory: r.workingDirectory,
 

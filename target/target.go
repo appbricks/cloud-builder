@@ -155,12 +155,23 @@ func NewTarget(
 }
 
 func (t *Target) Name() string {
-	return fmt.Sprintf(
-		"Deployment \"%s\" on Cloud \"%s\" and Region \"%s\"",
-		t.DeploymentName(),
-		t.Provider.Name(),
-		*t.Provider.Region(),
-	)
+	region := t.Provider.Region()
+
+	if region == nil {
+		return fmt.Sprintf(
+			"Deployment \"%s\" on \"%s\".",
+			t.DeploymentName(),
+			t.Provider.Name(),
+		)
+	
+	} else {
+		return fmt.Sprintf(
+			"Deployment \"%s\" on Cloud \"%s\" and Region \"%s\"",
+			t.DeploymentName(),
+			t.Provider.Name(),
+			*region,
+		)	
+	}
 }
 
 func (t *Target) Description() string {
@@ -285,14 +296,14 @@ func (t *Target) Status() TargetState {
 		numPending := 0
 		numUnknown := 0
 		for _, instance := range managedInstances {
-			if state, err = instance.Instance.State(); err != nil {
+			if state, err = instance.State(); err != nil {
 				logger.TraceMessage(
 					"Managed instance '%s' of target '%s' returned an error when querying its state: %s",
 					instance.Instance.Name(), t.Key(), err.Error(),
 				)
 				numUnknown++
 				continue
-			}
+			}	
 			switch state {
 			case cloud.StateRunning:
 				numRunning++
@@ -516,15 +527,22 @@ func (t *Target) loadRemoteRefs() error {
 				}
 			}
 
-			logger.TraceMessage("Retrieving managed instances: %# v", ids)
-			if cloudInstances, err = t.compute.GetInstances(ids); err != nil {
-				return err
-			}
-			if len(cloudInstances) == 0 {
-				return fmt.Errorf("unable to lookup managed instances from cloud provider")
-			}
-			for _, cloudInstance := range cloudInstances {
-				instanceRef[cloudInstance.ID()].Instance = cloudInstance
+			if t.compute != nil {
+				logger.TraceMessage("Retrieving managed instances: %# v", ids)
+				if cloudInstances, err = t.compute.GetInstances(ids); err != nil {
+					return err
+				}	
+				if len(cloudInstances) == 0 {
+					return fmt.Errorf("unable to lookup managed instances from cloud provider")
+				}
+				for _, cloudInstance := range cloudInstances {
+					instanceRef[cloudInstance.ID()].Instance = cloudInstance
+				}
+			} else {
+				logger.TraceMessage(
+					"Provider '%s' does not have a compute backend. Instances in deployment will default to unmanaged: %# v", 
+					t.Provider.Name(), ids,
+				)
 			}
 
 		} else {
@@ -558,13 +576,8 @@ func (t *Target) Copy() (*Target, error) {
 	if recipeCopy, err = t.Recipe.Copy(); err != nil {
 		return nil, err
 	}
-	if providerCopy, err = t.Provider.Copy(); err != nil {
-		return nil, err
-	}
-	if backendCopy, err = t.Backend.Copy(); err != nil {
-		return nil, err
-	}
-	return &Target{
+
+	tgt := &Target{
 		RecipeName: t.RecipeName,
 		RecipeIaas: t.RecipeIaas,
 
@@ -573,9 +586,7 @@ func (t *Target) Copy() (*Target, error) {
 
 		DependentTargets: t.DependentTargets,
 
-		Recipe:   recipeCopy.(cookbook.Recipe),
-		Provider: providerCopy.(provider.CloudProvider),
-		Backend:  backendCopy.(backend.CloudBackend),
+		Recipe: recipeCopy.(cookbook.Recipe),
 
 		Output: t.Output,
 
@@ -588,7 +599,21 @@ func (t *Target) Copy() (*Target, error) {
 		dependencies: t.dependencies,
 		dependents: t.dependents,
 
-	}, nil
+	}
+	if t.Provider != nil {
+		if providerCopy, err = t.Provider.Copy(); err != nil {
+			return nil, err
+		}
+		tgt.Provider = providerCopy.(provider.CloudProvider)
+	}
+	if t.Backend != nil {
+		if backendCopy, err = t.Backend.Copy(); err != nil {
+			return nil, err
+		}
+		tgt.Backend = backendCopy.(backend.CloudBackend)
+	}
+
+	return tgt, nil
 }
 
 // prepares the target backend
@@ -600,19 +625,27 @@ func (t *Target) PrepareBackend() error {
 		storage cloud.Storage
 	)
 
-	if !t.Backend.IsValid() {
-		return fmt.Errorf(
-			"the backend configuration for target %s is not valid",
-			t.Key(),
-		)
+	if t.Backend != nil {		
+		if !t.Backend.IsValid() {
+			return fmt.Errorf(
+				"the backend configuration for target %s is not valid",
+				t.Key(),
+			)
+		}
+		backEndProviderType := t.Backend.GetProviderType()
+		if len(backEndProviderType) > 0 {
+			if t.Provider == nil || backEndProviderType != t.Provider.Name() {
+				return fmt.Errorf("no provider in recipe available for backend")
+			}
+			if err = t.Provider.Connect(); err != nil {
+				return err
+			}
+			if storage, err = t.Provider.GetStorage(); err != nil {
+				return err
+			}
+			_, err = storage.NewInstance(t.Backend.GetStorageInstanceName())	
+		}
 	}
-	if err = t.Provider.Connect(); err != nil {
-		return err
-	}
-	if storage, err = t.Provider.GetStorage(); err != nil {
-		return err
-	}
-	_, err = storage.NewInstance(t.Backend.GetStorageInstanceName())
 	return err
 }
 
@@ -735,7 +768,7 @@ func (t *Target) IsRunning() bool {
 			logger.DebugMessage("Target.isRunning(): Target does not have a managed bastion instance.")
 			return false			
 		}
-		if instanceState, err = instance.Instance.State(); err != nil {
+		if instanceState, err = instance.State(); err != nil {
 			logger.DebugMessage("Target.isRunning(): ERROR! %s", err.Error())
 			return false
 		}
@@ -937,6 +970,9 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 }
 
 func (i *ManagedInstance) State() (cloud.InstanceState, error) {
+	if i.Instance == nil {
+		return cloud.StateUnknown, nil
+	}
 	return i.Instance.State()
 }
 

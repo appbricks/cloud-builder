@@ -185,11 +185,15 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		if err = json.Unmarshal(parsedTarget.Recipe, target.Recipe); err != nil {
 			return err
 		}
-		if err = json.Unmarshal(parsedTarget.Provider, target.Provider); err != nil {
-			return err
+		if parsedTarget.Provider != nil && target.Provider != nil {
+			if err = json.Unmarshal(parsedTarget.Provider, target.Provider); err != nil {
+				return err
+			}
 		}
-		if err = json.Unmarshal(parsedTarget.Backend, target.Backend); err != nil {
-			return err
+		if parsedTarget.Backend != nil && target.Backend != nil {
+			if err = json.Unmarshal(parsedTarget.Backend, target.Backend); err != nil {
+				return err
+			}	
 		}
 		target.DependentTargets = parsedTarget.DependentTargets
 		target.Output = parsedTarget.Output

@@ -310,5 +310,10 @@ func (r *Runner) Destroy() error {
 	// ensure plan file if it exists is removed
 	os.RemoveAll(filepath.Join(r.cli.WorkingDirectory(), tfPlanFileName))
 
-	return r.cli.RunWithEnv([]string{"destroy", "-auto-approve"}, r.env)
+	return r.cli.RunWithEnv([]string{
+		r.configPath, 
+		"apply", 
+		"-destroy", 
+		"-auto-approve",
+	}, r.env)
 }

@@ -246,6 +246,7 @@ func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
 					recipeIaaS,
 					filepath.Join(cookbookRoot, pathSuffix),
 					c.tfPluginPath,
+					filepath.Join(c.workspacePath, "state", cm.CookbookName, pathSuffix),
 					c.tfCLIPath,
 					filepath.Join(c.workspacePath, "run", cm.CookbookName, pathSuffix),
 					metadata.CookbookName,
