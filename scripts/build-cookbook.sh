@@ -160,7 +160,7 @@ cookbook_dist_zip=${build_dir}/dist/cookbook-${target_os}_${target_arch}.zip
 [[ -z $clean ]] || \
   (rm -fr $dist_dir && rm -f $cookbook_dist_zip)
 
-terraform_version=${TERRAFORM_VERSION:-1.3.6}
+terraform_version=${TERRAFORM_VERSION:-1.3.7}
 
 mkdir -p $bin_dir
 terraform=${bin_dir}/terraform
