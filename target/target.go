@@ -649,6 +649,55 @@ func (t *Target) PrepareBackend() error {
 	return err
 }
 
+// deletes the target backend
+func (t *Target) DeleteBackend() error {
+
+	var (
+		err error
+
+		storage  cloud.Storage
+		instances []cloud.StorageInstance
+
+		objects []string
+	)
+
+	if t.Backend != nil {		
+		if !t.Backend.IsValid() {
+			return fmt.Errorf(
+				"the backend configuration for target %s is not valid",
+				t.Key(),
+			)
+		}
+		backEndProviderType := t.Backend.GetProviderType()
+		if len(backEndProviderType) > 0 {
+			if t.Provider == nil || backEndProviderType != t.Provider.Name() {
+				return fmt.Errorf("no provider in recipe available for backend")
+			}
+			if err = t.Provider.Connect(); err == nil {
+				if storage, err = t.Provider.GetStorage(); err == nil {
+					if instances, err = storage.ListInstances(); err == nil {
+						for _, instance := range instances {
+							if instance.Name() == t.Backend.GetStorageInstanceName() {
+								if objects, err = instance.ListObjects(""); err != nil {
+									return err
+								}
+								for _, o := range objects {
+									if err = instance.DeleteObject(o); err != nil {
+										return err
+									}
+								}
+								err = instance.Delete()
+								break		
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return err
+}
+
 // returns a launcher for this target
 func (t *Target) NewBuilder(
 	buildVars map[string]string,
