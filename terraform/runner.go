@@ -80,6 +80,15 @@ func (r *Runner) SetEnv(
 	}
 }
 
+func (r *Runner) AddToEnv(
+	env map[string]string,
+) {
+
+	for k, v := range env {
+		r.env = append(r.env, fmt.Sprintf("%s=%s", k, v))
+	}
+}
+
 func (r *Runner) SetBackend(
 	env map[string]string,
 ) {

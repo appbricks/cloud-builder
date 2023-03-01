@@ -123,7 +123,7 @@ func (b *Builder) setEnvVars(runner *terraform.Runner) error {
 }
 
 // prepare and return template variables
-func (b *Builder) getTemplateVars() (map[string]string, error) {
+func (b *Builder) getTemplateVars(asTfEnv bool) (map[string]string, error) {
 
 	var (
 		err error
@@ -161,7 +161,11 @@ func (b *Builder) getTemplateVars() (map[string]string, error) {
 					inputField.Name())
 			}	
 		}
-		vars[inputField.Name()] = *value
+		if asTfEnv {
+			vars["TF_VAR_"+inputField.Name()] = *value
+		} else {
+			vars[inputField.Name()] = *value
+		}
 	}
 
 	return vars, nil
@@ -223,7 +227,7 @@ func (b *Builder) ShowLaunchPlan() error {
 	)
 
 	if runner, err = b.newRunner(); err == nil {
-		if vars, err = b.getTemplateVars(); err == nil {
+		if vars, err = b.getTemplateVars(false); err == nil {
 			err = runner.Plan(vars)
 		}
 	}
@@ -274,7 +278,7 @@ func (b *Builder) Launch() error {
 	)
 
 	if runner, err = b.newRunner(); err == nil {
-		if vars, err = b.getTemplateVars(); err == nil {
+		if vars, err = b.getTemplateVars(false); err == nil {
 			b.output, err = runner.Apply(vars)
 		}
 	}
@@ -310,11 +314,16 @@ func (b *Builder) Delete() error {
 	var (
 		err error
 
+		vars map[string]string
+
 		runner *terraform.Runner
 	)
 
 	if runner, err = b.newRunner(); err == nil {
-		err = runner.Destroy()
+		if vars, err = b.getTemplateVars(true); err == nil {
+			runner.AddToEnv(vars)
+			err = runner.Destroy()
+		}
 	}
 	return err
 }
