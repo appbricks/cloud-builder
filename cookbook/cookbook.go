@@ -38,8 +38,8 @@ type Cookbook struct {
 	// nested map [recipe_name][iaas_name]
 	recipes map[string]map[string]Recipe
 
-	cookbooks         map[string]*CookbookMetadata
-	cookbookTimestamp string
+	cookbooks     map[string]*CookbookMetadata
+	repoTimestamp string
 
 	mx   sync.Mutex
 	init sync.WaitGroup
@@ -108,8 +108,8 @@ func NewCookbook(
 		path:    filepath.Join(workspacePath, "cookbook", ts),
 		recipes: make(map[string]map[string]Recipe),
 
-		cookbooks:         make(map[string]*CookbookMetadata),
-		cookbookTimestamp: ts,
+		cookbooks:     make(map[string]*CookbookMetadata),
+		repoTimestamp: ts,
 	}
 
 	info, err := os.Stat(c.path)
@@ -255,6 +255,7 @@ func (c *Cookbook) addRecipeMetadata(cookbookRoot, recipesPath string) error {
 					filepath.Join(c.workspacePath, "state", cm.CookbookName, pathSuffix),
 					c.tfCLIPath,
 					filepath.Join(c.workspacePath, "run", cm.CookbookName, pathSuffix),
+					c.repoTimestamp,
 					metadata.CookbookName,
 					metadata.CookbookVersion,
 					recipeName,

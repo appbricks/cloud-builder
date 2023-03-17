@@ -45,6 +45,7 @@ type Target struct {
 	RecipeName   string `json:"recipeName"`
 	RecipeIaas   string `json:"recipeIaas"`
 
+	RepoTimestamp   string `json:"repoTimestamp,omitempty"`
 	CookbookName    string `json:"cookbookName,omitempty"`
 	CookbookVersion string `json:"cookbookVersion,omitempty"`
 
@@ -141,6 +142,7 @@ func NewTarget(
 		RecipeName: r.RecipeName(),
 		RecipeIaas: p.Name(),
 
+		RepoTimestamp:   r.RepoTimestamp(),
 		CookbookName:    r.CookbookName(),
 		CookbookVersion: r.CookbookVersion(),
 
@@ -581,6 +583,7 @@ func (t *Target) Copy() (*Target, error) {
 		RecipeName: t.RecipeName,
 		RecipeIaas: t.RecipeIaas,
 
+		RepoTimestamp: t.RepoTimestamp,
 		CookbookName: t.CookbookName,
 		CookbookVersion: t.CookbookVersion,
 

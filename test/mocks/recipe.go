@@ -120,12 +120,16 @@ func (f *FakeRecipe) BackendType() string {
 	return "fake"
 }
 
+func (f *FakeRecipe) RepoTimestamp() string {
+	return "faketimestamp"
+}
+
 func (f *FakeRecipe) CookbookName() string {
 	return "fakecookebook"
 }
 
 func (f *FakeRecipe) CookbookVersion() string {
-	return "faketimestamp"
+	return "fakeversion"
 }
 
 func (f *FakeRecipe) RecipeName() string {

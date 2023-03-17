@@ -86,7 +86,7 @@ func (mctx *FakeTargetContext) NewTarget(recipeKey, recipeIaas string,) (*target
 	if r, err = cookbook.NewRecipe(
 		recipeKey, recipeIaas,
 		fmt.Sprintf("%s/%s/%s", mctx.recipePath, recipeName, recipeIaas),
-		"", "", "", "", cookbookName, "0.0.0", recipeName, [][]string{}); err != nil {
+		"", "", "", "", "", cookbookName, "0.0.0", recipeName, [][]string{}); err != nil {
 		return nil, err
 	}
 	if p, err = provider.NewCloudProvider(recipeIaas); err != nil {

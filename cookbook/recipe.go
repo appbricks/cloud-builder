@@ -47,6 +47,7 @@ type Recipe interface {
 
 	BackendType() string
 
+	RepoTimestamp() string
 	CookbookName() string
 	CookbookVersion() string
 	RecipeName() string
@@ -81,6 +82,7 @@ type recipe struct {
 	tfStatePath,
 	tfCLIPath,
 	workingDirectory,	
+	repoTimestamp,
 	cookbookName,
 	cookbookVersion,
 	recipeName,
@@ -97,6 +99,7 @@ func NewRecipe(
 	tfStatePath,
 	tfCLIPath,
 	workingDirectory,
+	repoTimestamp,
 	cookbookName,
 	cookbookVersion,
 	recipeName string,
@@ -138,6 +141,7 @@ func NewRecipe(
 
 		cookbookName:    cookbookName,
 		cookbookVersion: cookbookVersion,
+		repoTimestamp:   repoTimestamp,
 		recipeName:      recipeName,
 		recipeIaaS:      recipeIaaS,
 		recipeEnvVars:   recipeEnvVars,
@@ -409,6 +413,11 @@ func (r *recipe) BackendType() string {
 	return r.backendType
 }
 
+// out: the timestamp of the cookbook repository.
+func (r *recipe) RepoTimestamp() string {
+	return r.repoTimestamp
+}
+
 // out: the name of the cookbook this recipe is
 //      associated with.
 func (r *recipe) CookbookName() string {
@@ -506,6 +515,7 @@ func (r *recipe) Copy() (config.Configurable, error) {
 		tfCLIPath:        r.tfCLIPath,
 		workingDirectory: r.workingDirectory,
 
+		repoTimestamp:   r.repoTimestamp,
 		cookbookName:    r.cookbookName,
 		cookbookVersion: r.cookbookVersion,
 		recipeName:      r.recipeName,
