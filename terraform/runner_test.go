@@ -368,7 +368,9 @@ var _ = Describe("Runner", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
-						"destroy",
+						"-chdir=" + testRecipePath,
+						"apply",
+						"-destroy",
 						"-auto-approve",
 					},
 					[]string{
@@ -395,7 +397,9 @@ var _ = Describe("Runner", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
-						"destroy",
+						"-chdir=" + testRecipePath,
+						"apply",
+						"-destroy",
 						"-auto-approve",
 					},
 					[]string{
