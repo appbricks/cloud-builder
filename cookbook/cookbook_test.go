@@ -85,7 +85,7 @@ var _ = Describe("Cookbook", func() {
 				fi os.FileInfo
 			)
 
-			runPath := filepath.Join(workspacePath, "run", "recipes", "basic", "aws", "test")
+			runPath := filepath.Join(workspacePath, "run", "test", "recipes", "basic", "aws", "test")
 			lockFile := filepath.Join(runPath, ".terraform.lock.hcl")
 			labelModule := filepath.Join(runPath, ".terraform", "modules", "label")
 			moduleMeta := filepath.Join(runPath, ".terraform", "modules", "modules.json")
@@ -198,7 +198,7 @@ var _ = Describe("Cookbook Import", func() {
 		validateCoobookRecipes(c1, map[string][]string{
 			"test:basic":  {"aws", "google"},
 			"test:simple": {"google"},
-			"minecraft:server": {"aws", "azure", "google"},
+			"minecraft:server": {"aws", "azure", "docker", "google"},
 		})
 
 		c2, err := cookbook.NewCookbook(box, filepath.Join(workspacePath, "import"), &outputBuffer, &errorBuffer)
@@ -211,7 +211,7 @@ var _ = Describe("Cookbook Import", func() {
 		validateCoobookRecipes(c2, map[string][]string{
 			"test:basic":  {"aws", "google"},
 			"test:simple": {"google"},
-			"minecraft:server": {"aws", "azure", "google"},
+			"minecraft:server": {"aws", "azure", "docker", "google"},
 		})
 
 		cookbookList := c2.CookbookList(false)

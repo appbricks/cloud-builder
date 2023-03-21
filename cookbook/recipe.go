@@ -52,6 +52,7 @@ type Recipe interface {
 	CookbookVersion() string
 	RecipeName() string
 	RecipeIaaS() string
+	RecipeKey() string
 
 	AddEnvVars(vars map[string]string)
 }
@@ -438,6 +439,12 @@ func (r *recipe) RecipeName() string {
 // out: the name of the cookbook recipe's iaas
 func (r *recipe) RecipeIaaS() string {
 	return r.recipeIaaS
+}
+
+// out: the key that uniquely identifies this recipe 
+//      in the cookbook repo
+func (r *recipe) RecipeKey() string {
+	return r.cookbookName + ":" + r.recipeName
 }
 
 // out: default environment vars for the recipe

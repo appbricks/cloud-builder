@@ -706,7 +706,7 @@ func (c *Cookbook) SetRecipe(recipe Recipe) {
 		rr        map[string]Recipe
 	)
 
-	recipeKey = recipe.CookbookName() + ":" + recipe.RecipeName()
+	recipeKey = recipe.RecipeKey()
 	if rr, ok = c.recipes[recipeKey]; !ok {
 		rr = make(map[string]Recipe)
 		c.recipes[recipeKey] = rr

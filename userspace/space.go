@@ -44,8 +44,6 @@ type SpaceNode interface {
 }
 
 type Space struct {
-	key string
-
 	SpaceID     string `json:"spaceID"`
 	SpaceName   string `json:"spaceName"`
 
@@ -88,24 +86,7 @@ type SpaceUser struct {
 }
 
 func (s *Space) Key() string {
-
-	var (
-		key strings.Builder
-	)
-
-	if len(s.key) == 0 {
-		key.WriteString(s.Cookbook)
-		key.Write([]byte{':'})
-		key.WriteString(s.Recipe)
-		key.Write([]byte{'/'})
-		key.WriteString(s.IaaS)
-		key.Write([]byte{'/'})
-		key.WriteString(s.Region)
-		key.Write([]byte{'/'})
-		key.WriteString(s.SpaceName)
-		s.key = key.String()
-	}
-	return s.key
+	return s.SpaceName
 }
 
 func (s *Space) GetSpaceID() string {

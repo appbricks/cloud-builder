@@ -115,19 +115,12 @@ type ManagedInstance struct {
 }
 
 // create a target key
-func CreateKey(
-	recipeKey, iaasName string, 
-	keyValues ...string,
-) string {
+func CreateKey(keyValues ...string) string {
 	
 	var (
 		key strings.Builder
 	)
 	
-	key.WriteString(recipeKey)
-	key.Write([]byte{'/'})
-	key.WriteString(iaasName)
-	key.Write([]byte{'/'})
 	key.WriteString(strings.Join(keyValues, "/"))
 	return key.String()
 }
@@ -359,8 +352,8 @@ func (t *Target) Refresh() {
 		}()
 
 		if t.loadRemoteRefError = t.loadRemoteRefs(); t.loadRemoteRefError != nil {
-			logger.DebugMessage(
-				"Error refreshing remote refs of target '%s':", 
+			logger.ErrorMessage(
+				"Error refreshing remote refs of target '%s': %s", 
 				t.Key(), t.loadRemoteRefError.Error())
 		}
 	}()
@@ -757,7 +750,7 @@ func (t *Target) Key() string {
 	for _, dt := range t.dependencies {
 		keyValues = append(keyValues, "<"+dt.Key())
 	}
-	return CreateKey(t.CookbookName + ":" + t.RecipeName, t.RecipeIaas, keyValues...)
+	return CreateKey(keyValues...)
 }
 
 func (t *Target) GetSpaceID() string {

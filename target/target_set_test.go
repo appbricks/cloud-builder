@@ -125,7 +125,7 @@ var _ = Describe("TargetSet", func() {
 			err = ts.SaveTarget(tgt1Key, tgt)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ts.GetTarget(tgt1Key)).To(BeNil())
-			Expect(ts.GetTarget("cb1:basic/aws/aa/cookbook")).ToNot(BeNil())
+			Expect(ts.GetTarget("aa/cookbook")).ToNot(BeNil())
 
 			tgt = ts.GetTarget(tgt2Key)
 			Expect(tgt).ToNot(BeNil())
@@ -137,11 +137,11 @@ var _ = Describe("TargetSet", func() {
 			err = inputForm.SetFieldValue("test_input_6", "test_input_6 updated")
 			Expect(err).NotTo(HaveOccurred())
 
-			tgt.DependentTargets = []string{"cb1:basic/aws/aa/cookbook"}
+			tgt.DependentTargets = []string{"aa/cookbook"}
 			err = ts.SaveTarget(tgt2Key, tgt)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ts.GetTarget(tgt2Key)).To(BeNil())
-			Expect(ts.GetTarget("cb2:basic/aws/bb/appbrickscookbook/<cb1:basic/aws/aa/cookbook")).ToNot(BeNil())
+			Expect(ts.GetTarget("bb/appbrickscookbook/<aa/cookbook")).ToNot(BeNil())
 
 			// serialize targets
 
@@ -193,7 +193,7 @@ var _ = Describe("TargetSet", func() {
 					Expect(actualTargetConfig["recipeName"]).To(Equal("basic"))
 					Expect(actualTargetConfig["recipeIaas"]).To(Equal("aws"))
 					Expect(len(deps)).To(Equal(1))
-					Expect(deps[0]).To(Equal("cb1:basic/aws/aa/cookbook"))
+					Expect(deps[0]).To(Equal("aa/cookbook"))
 					expectedVariableMap = utils.Copy(test_data.AWSBasicRecipeVariables2AsMap).(map[string]interface{})
 
 					expectedVariableMap["test_input_1"] = map[string]interface{}{
@@ -230,8 +230,8 @@ var _ = Describe("TargetSet", func() {
 	})
 })
 
-const tgt1Key = `cb1:basic/aws/aa//<cb2:basic/aws/cc/appbrickscookbook`
-const tgt2Key = `cb2:basic/aws/cc/appbrickscookbook`
+const tgt1Key = `aa//<cc/appbrickscookbook`
+const tgt2Key = `cc/appbrickscookbook`
 
 const targetConfigDocument = `
 [
@@ -239,7 +239,7 @@ const targetConfigDocument = `
 		"recipeName": "basic",
 		"recipeIaas": "aws",
 		"cookbookName": "cb1",
-		"dependentTargets": [ "cb2:basic/aws/cc/appbrickscookbook" ],
+		"dependentTargets": [ "cc/appbrickscookbook" ],
 		"recipe": {
 			"variables": ` + test_data.AWSBasicRecipeVariables1 + `
 		},

@@ -155,8 +155,8 @@ var _ = Describe("Builder", func() {
 					[]string{
 						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
-						"envvar1=provider value 1",
-						"envvar2=provider value 2",
+						"envvar1_input=provider value 1",
+						"envvar2_input=provider value 2",
 					},
 					"Terraform has been successfully initialized!",
 					"",
@@ -183,8 +183,8 @@ var _ = Describe("Builder", func() {
 					[]string{
 						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
-						"envvar1=provider value 1",
-						"envvar2=provider value 2",
+						"envvar1_input=provider value 1",
+						"envvar2_input=provider value 2",
 					},
 					"Plan: 1 to add, 0 to change, 0 to destroy.",
 					"",
@@ -207,8 +207,8 @@ var _ = Describe("Builder", func() {
 						[]string{
 							"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 							"TF_VAR_test_input_3=arg value 3",
-							"envvar1=provider value 1",
-							"envvar2=provider value 2",
+							"envvar1_input=provider value 1",
+							"envvar2_input=provider value 2",
 						},
 						resource+" tainted:",
 						"",
@@ -232,8 +232,8 @@ var _ = Describe("Builder", func() {
 						[]string{
 							"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 							"TF_VAR_test_input_3=arg value 3",
-							"envvar1=provider value 1",
-							"envvar2=provider value 2",
+							"envvar1_input=provider value 1",
+							"envvar2_input=provider value 2",
 						},
 						resource+" tainted:",
 						"",
@@ -261,8 +261,8 @@ var _ = Describe("Builder", func() {
 					[]string{
 						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
-						"envvar1=provider value 1",
-						"envvar2=provider value 2",
+						"envvar1_input=provider value 1",
+						"envvar2_input=provider value 2",
 					},
 					"Plan: 1 to add, 0 to change, 0 to destroy.",
 					"",
@@ -278,8 +278,8 @@ var _ = Describe("Builder", func() {
 					[]string{
 						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
-						"envvar1=provider value 1",
-						"envvar2=provider value 2",
+						"envvar1_input=provider value 1",
+						"envvar2_input=provider value 2",
 					},
 					"Apply complete!",
 					"",
@@ -294,8 +294,8 @@ var _ = Describe("Builder", func() {
 					[]string{
 						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
 						"TF_VAR_test_input_3=arg value 3",
-						"envvar1=provider value 1",
-						"envvar2=provider value 2",
+						"envvar1_input=provider value 1",
+						"envvar2_input=provider value 2",
 					},
 					`{
 						"output1": {
@@ -322,14 +322,19 @@ var _ = Describe("Builder", func() {
 
 				cli.ExpectFakeRequest(cli.AddFakeResponse(
 					[]string{
-						"destroy",
+						"-chdir=" + testRecipePath,
+						"apply",
+						"-destroy",
 						"-auto-approve",
 					},
 					[]string{
 						"TF_DATA_DIR=/goutils/test/cli/workingdirectory/.terraform",
+						"TF_VAR_test_input_1=arg value 1",
+						"TF_VAR_test_input_2=arg value 2",
 						"TF_VAR_test_input_3=arg value 3",
-						"envvar1=provider value 1",
-						"envvar2=provider value 2",
+						"TF_VAR_test_input_4=arg value 4",
+						"envvar1_input=provider value 1",
+						"envvar2_input=provider value 2",
 					},
 					"Destroy complete! Resources: 1 destroyed.",
 					"",

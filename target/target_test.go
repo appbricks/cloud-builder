@@ -111,7 +111,7 @@ var _ = Describe("Target", func() {
 			err = json.Unmarshal([]byte(testTargetConfig), t)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(t.Key()).To(Equal("test:basic/aws/aa/"))
+			Expect(t.Key()).To(Equal("aa/"))
 			Expect(t.DeploymentName()).To(Equal("NONAME"))
 			Expect(t.RecipeName).To(Equal("basic"))
 			Expect(t.RecipeIaas).To(Equal("aws"))

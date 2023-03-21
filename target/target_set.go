@@ -61,21 +61,9 @@ func NewTargetSet(ctx context) *TargetSet {
 	}
 }
 
-func (ts *TargetSet) Lookup(
-	recipeKey, iaasName string,
-	keyValues ...string,
-) []*Target {
+func (ts *TargetSet) Lookup(keyValues ...string) []*Target {
 
-	var (
-		key strings.Builder
-	)
-
-	key.WriteString(recipeKey)
-	key.Write([]byte{'/'})
-	key.WriteString(iaasName)
-	key.Write([]byte{'/'})
-	key.WriteString(strings.Join(keyValues, "/"))
-	keyPath := key.String()
+	keyPath := CreateKey(keyValues...)
 
 	targets := make([]*Target, 0, len(ts.targets))
 	l := 0
@@ -86,7 +74,7 @@ func (ts *TargetSet) Lookup(
 			// add targets to array
 			// sorting it along the way
 			i := sort.Search(l, func(j int) bool {
-				return targets[j].DeploymentName() > t.DeploymentName()
+				return targets[j].Key() > t.Key()
 			})
 			targets = append(targets, nil)
 			if targets[i] != nil {
@@ -101,11 +89,21 @@ func (ts *TargetSet) Lookup(
 
 func (ts *TargetSet) GetTargets() []*Target {
 
-	targets := make([]*Target, len(ts.targets))
-	i := 0
+	targets := make([]*Target, 0, len(ts.targets))
+	l := 0
+
 	for _, t := range ts.targets {
+		// add targets to array
+		// sorting it along the way
+		i := sort.Search(l, func(j int) bool {
+			return targets[j].Key() > t.Key()
+		})
+		targets = append(targets, nil)
+		if targets[i] != nil {
+			copy(targets[i+1:], targets[i:])
+		}
 		targets[i] = t
-		i++
+		l++
 	}
 	return targets
 }
