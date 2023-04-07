@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/appbricks/cloud-builder/cookbook"
 	"github.com/appbricks/cloud-builder/terraform"
 	"github.com/mevansam/goutils/logger"
 	"github.com/mevansam/goutils/utils"
@@ -16,6 +17,7 @@ type TargetSet struct {
 	ctx context
 
 	targets map[string]*Target
+	disabledTargets []*parsedTarget
 }
 
 // temporary target data structure used
@@ -148,6 +150,43 @@ func (ts *TargetSet) DeleteTarget(key string) {
 	delete(ts.targets, key)
 }
 
+func (ts *TargetSet) GetDisabledTargetRecipes() []cookbook.CookbookRecipeInfo {
+
+	recipesAdded := make(map[string]bool)
+	recipeInfos := make([]cookbook.CookbookRecipeInfo, 0, len(ts.disabledTargets))	
+	l := 0
+
+	for _, target := range ts.disabledTargets {
+		recipeInfo := cookbook.CookbookRecipeInfo{
+			CookbookName: target.CookbookName,
+			CookbookVersion: target.CookbookVersion,
+			RecipeName: target.RecipeName,
+		}
+		key := strings.Join([]string{ target.CookbookName, target.CookbookVersion, target.RecipeName }, "/")
+		if recipesAdded[key] {
+			continue
+		}
+		recipesAdded[key] = true
+
+		// insert recipe in descending order of cookebook and recipe name
+		// (bastion recipes are added to the head of the list)
+		i := sort.Search(l, func(j int) bool {
+			return recipeInfo.CookbookName < recipeInfos[j].CookbookName ||
+				recipeInfo.CookbookVersion < recipeInfos[j].CookbookVersion ||
+				recipeInfo.RecipeName < recipeInfos[j].RecipeName
+		})
+		recipeInfos = recipeInfos[:l+1]
+		if i == l {
+			recipeInfos[l] = recipeInfo
+		} else {
+			copy(recipeInfos[i+1:], recipeInfos[i:])
+			recipeInfos[i] = recipeInfo
+		}
+		l++
+	}	
+	return recipeInfos
+}
+
 // interface: encoding/json/Unmarshaler
 
 func (ts *TargetSet) UnmarshalJSON(b []byte) error {
@@ -178,7 +217,9 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 			parsedTarget.CookbookName + ":" + parsedTarget.RecipeName,
 			parsedTarget.RecipeIaas,
 		); err != nil {
-			return err
+			ts.disabledTargets = append(ts.disabledTargets, &parsedTarget)
+			logger.ErrorMessage("Unable to load saved target: %s", err.Error())
+			continue
 		}
 		if err = json.Unmarshal(parsedTarget.Recipe, target.Recipe); err != nil {
 			return err
@@ -241,18 +282,28 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 func (ts *TargetSet) MarshalJSON() ([]byte, error) {
 
 	var (
-		err   error
-		out   bytes.Buffer
-		first bool
+		err error
+		out bytes.Buffer
 	)
 	encoder := json.NewEncoder(&out)
-	first = true
 
 	if _, err = out.WriteRune('['); err != nil {
 		return out.Bytes(), err
 	}
 
+	first := true
 	for _, target := range ts.targets {
+		if first {
+			first = false
+		} else {
+			out.WriteRune(',')
+		}
+
+		if err = encoder.Encode(target); err != nil {
+			return out.Bytes(), err
+		}
+	}
+	for _, target := range ts.disabledTargets {
 		if first {
 			first = false
 		} else {
