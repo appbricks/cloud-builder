@@ -322,7 +322,17 @@ func (b *Builder) Delete() error {
 	if runner, err = b.newRunner(); err == nil {
 		if vars, err = b.getTemplateVars(true); err == nil {
 			runner.AddToEnv(vars)
-			err = runner.Destroy()
+			if err = runner.Destroy(); err == nil {
+				
+				// remove state file 
+				// of deleted deployment
+				os.RemoveAll(
+					path.Join(
+						b.cli.WorkingDirectory(),
+						".terraform", "terraform.tfstate",
+					),
+				)
+			}
 		}
 	}
 	return err
