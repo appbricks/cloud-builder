@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -121,7 +122,7 @@ func CreateKey(keyValues ...string) string {
 		key strings.Builder
 	)
 	
-	key.WriteString(strings.Join(keyValues, "/"))
+	key.WriteString(strings.Join(keyValues, "."))
 	return key.String()
 }
 
@@ -708,6 +709,7 @@ func (t *Target) NewBuilder(
 		buildVars["mycs_app_private_key"] = t.RSAPrivateKey
 		buildVars["mycs_app_id_key"] = t.NodeKey
 	}
+	buildVars["cb_local_state_path"] = filepath.Join(t.Recipe.StatePath(), t.Key())
 	t.Recipe.AddEnvVars(buildVars)
 
 	for _, dt := range t.dependencies {
@@ -748,7 +750,7 @@ func (t *Target) Key() string {
 	
 	keyValues := t.Recipe.GetKeyFieldValues()
 	for _, dt := range t.dependencies {
-		keyValues = append(keyValues, "<"+dt.Key())
+		keyValues = append(keyValues, dt.Key())
 	}
 	return CreateKey(keyValues...)
 }
