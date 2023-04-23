@@ -705,9 +705,11 @@ func (t *Target) NewBuilder(
 	if t.Recipe.IsBastion() {
 		buildVars["mycs_node_private_key"] = t.RSAPrivateKey
 		buildVars["mycs_node_id_key"] = t.NodeKey
+		buildVars["mycs_node_id"] = t.NodeID
 	} else {
 		buildVars["mycs_app_private_key"] = t.RSAPrivateKey
 		buildVars["mycs_app_id_key"] = t.NodeKey
+		buildVars["mycs_app_id"] = t.NodeID
 	}
 	buildVars["cb_local_state_path"] = filepath.Join(t.Recipe.StatePath(), t.Key())
 	t.Recipe.AddEnvVars(buildVars)
