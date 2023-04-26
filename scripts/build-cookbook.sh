@@ -273,16 +273,21 @@ for repo in $(ls ${recipe_repo_dir}); do
         exit 1
       fi
       set -e
-      cd
+
+      pushd $recipe_folder
+
+      # run os/arch initialization
+      [[ ! -e "__build.sh" ]] || \
+        ./__build.sh $target_os $target_arch $cookbook_version
 
       # initialize terraform templates in order to
       # download the dependent providers and modules
-      pushd $recipe_folder
       $terraform init -backend=false
       rm .terraform.lock.hcl
       $terraform providers lock -platform ${target_os}_${target_arch}
       rm -fr $plugin_mirror_dir
       $terraform providers mirror -platform ${target_os}_${target_arch} $plugin_mirror_dir
+
       popd
 
       # consolidate terraform providers to
@@ -351,9 +356,9 @@ env-args: []
 fi
 
 if [[ -n $template_only ]]; then
-  zip -ur $cookbook_dist_zip . -x "*.git*" -x "bin/terraform"
+  zip -ur $cookbook_dist_zip . -x "__build.sh" -x "*.git*" -x "bin/terraform"
 else
-  zip -ur $cookbook_dist_zip . -x "*.git*"
+  zip -ur $cookbook_dist_zip . -x "__build.sh" -x "*.git*"
 fi
 popd
 
