@@ -143,23 +143,31 @@ func (cc *targetContext) Load(input io.Reader) error {
 					}
 
 				case providers:
-					if cloudProvider, exists = cc.providers[key]; !exists {
-						return fmt.Errorf(
-							"invalid cloud provider '%s'",
-							key)
-					}
-					if err = decoder.Decode(cloudProvider); err != nil {
-						return err
+					if cloudProvider, exists = cc.providers[key]; exists {
+						if err = decoder.Decode(cloudProvider); err != nil {
+							return err
+						}
+					} else {
+						logger.ErrorMessage("Invalid cloud provider '%s' will be removed from config.", key)
+						
+						noop, _ := provider.NewCloudProvider("noop")
+						if err = decoder.Decode(noop); err != nil {
+							return err
+						}
 					}
 
 				case backends:
-					if cloudBackend, exists = cc.backends[key]; !exists {
-						return fmt.Errorf(
-							"invalid cloud backend '%s'",
-							key)
-					}
-					if err = decoder.Decode(cloudBackend); err != nil {
-						return err
+					if cloudBackend, exists = cc.backends[key]; exists {
+						if err = decoder.Decode(cloudBackend); err != nil {
+							return err
+						}
+					} else {
+						logger.ErrorMessage("Invalid cloud backend '%s' will be removed from config.", key)
+
+						noop, _ := backend.NewCloudBackend("noop")
+						if err = decoder.Decode(noop); err != nil {
+							return err
+						}
 					}
 				}
 			}
