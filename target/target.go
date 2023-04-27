@@ -23,6 +23,7 @@ import (
 	"github.com/mevansam/goforms/config"
 	"github.com/mevansam/goutils/crypto"
 	"github.com/mevansam/goutils/logger"
+	"github.com/mevansam/goutils/network"
 	"github.com/mevansam/goutils/rest"
 )
 
@@ -887,7 +888,20 @@ func (i *ManagedInstance) Description() string {
 }
 
 func (i *ManagedInstance) PublicIP() string {
-	return i.Instance.PublicIP()
+
+	var (
+		publicIP string
+	)
+
+	// get actual public IP (in cases where managed 
+	// instance is deployed using dynamic IP allocation)
+	if i.Instance != nil {
+		publicIP = i.Instance.PublicIP()
+	}
+	if len(publicIP) == 0 {
+		publicIP = i.publicIP
+	}
+	return publicIP
 }
 
 func (i *ManagedInstance) FQDN() string {
@@ -896,18 +910,7 @@ func (i *ManagedInstance) FQDN() string {
 
 func (i *ManagedInstance) SSHAddress() string {
 	
-	var (
-		publicIP string
-	)
-
-	if len(i.publicIP) > 0 {
-		// get actual public IP (in cases where managed 
-		// instance is deployed using dynamic IP allocation)
-		if publicIP = i.Instance.PublicIP(); len(publicIP) == 0 {
-			publicIP = i.publicIP
-		}
-	}
-	if len(publicIP) > 0 {
+	if publicIP := i.PublicIP(); len(publicIP) > 0 {
 		return fmt.Sprintf("%s:%s", publicIP, i.sshPort)
 	} else {
 		return fmt.Sprintf("%s:%s", i.privateIP, i.sshPort)
@@ -951,11 +954,13 @@ func (i *ManagedInstance) GetEndpoint() (string, error) {
 	} else {
 		protocol = "http"
 	}
-	host = i.Instance.PublicDNS()
-	if (len(host) == 0) {
-		host = fmt.Sprintf(
-			"%s.mycs.appbricks.org", strings.ReplaceAll(i.Instance.PublicIP(), ".", "-"),
-		)
+	if i.Instance != nil {
+		host = i.Instance.PublicDNS()
+		if (len(host) == 0) {
+			host = fmt.Sprintf(
+				"%s.mycs.appbricks.org", strings.ReplaceAll(i.Instance.PublicIP(), ".", "-"),
+			)
+		}	
 	}
 	if len(host) == 0 {
 		if len(i.fqdn) > 0 {
@@ -1019,8 +1024,13 @@ func (i *ManagedInstance) HttpsClient() (*http.Client, string, error) {
 }
 
 func (i *ManagedInstance) State() (cloud.InstanceState, error) {
+	
 	if i.Instance == nil {
-		return cloud.StateUnknown, nil
+		if canConnect, _ := i.CanConnect(); canConnect {
+			return cloud.StateRunning, nil
+		} else {
+			return cloud.StateUnknown, nil
+		}		
 	}
 	return i.Instance.State()
 }
@@ -1029,6 +1039,7 @@ func (i *ManagedInstance) CanConnect() (bool, error) {
 
 	var (
 		err  error
+		host string
 		port int
 	)
 	connError := fmt.Errorf("unable to determine connectivity state for instance")
@@ -1046,9 +1057,17 @@ func (i *ManagedInstance) CanConnect() (bool, error) {
 		)
 		return false, connError
 	}
+
 	switch i.hcType {
 	case "tcp":
-		return i.Instance.CanConnect(port), nil
+		if i.Instance != nil {
+			return i.Instance.CanConnect(port), nil
+		}
+		if host, err = i.getEndpointFromState(); err != nil {
+			return false, err
+		}
+		return network.CanConnect(host, port), nil
+
 	default:
 		logger.ErrorMessage(
 			"Unknown health check type '%s' provided for managed instance '%s'.", 
@@ -1056,4 +1075,20 @@ func (i *ManagedInstance) CanConnect() (bool, error) {
 		)
 		return false, connError
 	}
+}
+
+func (i *ManagedInstance) getEndpointFromState() (string, error) {
+
+	var host string
+
+	if len(i.fqdn) > 0 {
+		host = i.fqdn
+	} else if len(i.publicIP) > 0 {
+		host = i.publicIP
+	} else if len(i.privateIP) > 0 {
+		host = i.privateIP
+	} else {
+		return "", fmt.Errorf("unable to determine the managed instance's external host name/ip")
+	}
+	return host, nil
 }
