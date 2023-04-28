@@ -29,6 +29,7 @@ type parsedTarget struct {
 
 	CookbookName    string `json:"cookbookName"`
 	CookbookVersion string `json:"cookbookVersion"`
+	RepoTimestamp   string `json:"repoTimestamp,omitempty"`
 
 	DependentTargets []string `json:"dependentTargets"`
 
@@ -238,6 +239,7 @@ func (ts *TargetSet) UnmarshalJSON(b []byte) error {
 		target.Output = parsedTarget.Output
 		target.CookbookName = parsedTarget.CookbookName
 		target.CookbookVersion = parsedTarget.CookbookVersion
+		target.RepoTimestamp = parsedTarget.RepoTimestamp
 		target.RSAPrivateKey = parsedTarget.RSAPrivateKey
 		target.RSAPublicKey = parsedTarget.RSAPublicKey
 		target.NodeKey = parsedTarget.NodeKey

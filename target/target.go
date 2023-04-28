@@ -47,9 +47,9 @@ type Target struct {
 	RecipeName   string `json:"recipeName"`
 	RecipeIaas   string `json:"recipeIaas"`
 
-	RepoTimestamp   string `json:"repoTimestamp,omitempty"`
 	CookbookName    string `json:"cookbookName,omitempty"`
 	CookbookVersion string `json:"cookbookVersion,omitempty"`
+	RepoTimestamp   string `json:"repoTimestamp,omitempty"`
 
 	DependentTargets []string `json:"dependentTargets"`
 
@@ -137,9 +137,7 @@ func NewTarget(
 		RecipeName: r.RecipeName(),
 		RecipeIaas: p.Name(),
 
-		RepoTimestamp:   r.RepoTimestamp(),
-		CookbookName:    r.CookbookName(),
-		CookbookVersion: r.CookbookVersion(),
+		CookbookName: r.CookbookName(),
 
 		DependentTargets: []string{},
 
@@ -207,6 +205,13 @@ func (t *Target) UpdateKeys() (*Target, error) {
 		return nil, err
 	}	
 	return t, nil
+}
+
+func (t *Target) SetOutput(output *map[string]terraform.Output) {
+
+	t.Output = output
+	t.CookbookVersion = t.Recipe.CookbookVersion()
+	t.RepoTimestamp = t.Recipe.RepoTimestamp()
 }
 
 // functions referencing target's remote managed cloud instances
