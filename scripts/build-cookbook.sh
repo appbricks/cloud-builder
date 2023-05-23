@@ -356,9 +356,9 @@ env-args: []
 fi
 
 if [[ -n $template_only ]]; then
-  zip -ur $cookbook_dist_zip . -x "__build.sh" -x "*.git*" -x "bin/terraform"
+  zip -ur $cookbook_dist_zip . -x "*/__build.sh" -x "*.git*" -x "bin/terraform"
 else
-  zip -ur $cookbook_dist_zip . -x "__build.sh" -x "*.git*"
+  zip -ur $cookbook_dist_zip . -x "*/__build.sh" -x "*.git*"
 fi
 popd
 
