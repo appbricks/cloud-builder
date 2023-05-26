@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -214,6 +215,27 @@ func (t *Target) SetOutput(output *map[string]terraform.Output) {
 	t.RepoTimestamp = t.Recipe.RepoTimestamp()
 }
 
+func (t *Target) CanUpdate() bool {
+
+	if t.Recipe.BackendType() == "local" {
+		// if recipe state is local and the
+		// target status is one of the deployed
+		// states than you can update the 
+		// target only if the local state is
+		// present in the current host
+		if t.Status() != Undeployed {
+
+			statePath := filepath.Join(
+				t.Recipe.RunPath(),
+				".terraform", "terraform.tfstate",
+			)
+			_, err := os.Stat(statePath)
+			return !os.IsNotExist(err)
+		}
+	}
+	return true
+}
+
 // functions referencing target's remote managed cloud instances
 
 func (t *Target) ManagedInstances() []*ManagedInstance {
@@ -245,6 +267,9 @@ func (t *Target) Resume(cb InstanceStateChange) error {
 	if t.Status() == Shutdown {
 		for _, managedInstance := range t.managedInstances {
 			cb(managedInstance.name, managedInstance)
+			if managedInstance.Instance == nil {
+				return fmt.Errorf("target's provider does not support resume operation")	
+			}
 			if err = managedInstance.Instance.Start(); err != nil {
 				return err
 			}
@@ -266,6 +291,9 @@ func (t *Target) Suspend(cb InstanceStateChange) error {
 	if t.Status() == Running {
 		for _, managedInstance := range t.managedInstances {
 			cb(managedInstance.name, managedInstance)
+			if managedInstance.Instance == nil {
+				return fmt.Errorf("target's provider does not support suspend operation")	
+			}
 			if err = managedInstance.Instance.Stop(); err != nil {
 				return err
 			}
@@ -743,7 +771,7 @@ func (t *Target) NewBuilder(
 	}
 
 	return NewBuilder(
-		strings.Join(t.Recipe.GetKeyFieldValues(), "/"),
+		filepath.Join(t.Recipe.GetKeyFieldValues()...),
 		t.Recipe,
 		t.Provider,
 		t.Backend,

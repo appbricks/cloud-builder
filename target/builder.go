@@ -1,10 +1,10 @@
 package target
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/mevansam/gocloud/backend"
@@ -171,6 +171,39 @@ func (b *Builder) getTemplateVars(asTfEnv bool) (map[string]string, error) {
 	return vars, nil
 }
 
+// this build's local state
+// - is build's run state present
+// - is build's resource state local
+func (b *Builder) GetLocalBuildState() (bool, bool) {
+
+	var (
+		err error
+
+		tfStateData []byte
+	)
+
+	stateData := struct {
+		Backend struct {
+			Config struct {
+				Path string
+			}
+		}
+	}{}
+
+	// check if terraform state file exists
+	statePath := filepath.Join(
+		b.cli.WorkingDirectory(),
+		".terraform", "terraform.tfstate",
+	)
+	if tfStateData, err = os.ReadFile(statePath); err != nil {
+		return false, false
+	}
+	if err = json.Unmarshal(tfStateData, &stateData); err != nil {
+		return true, false
+	}
+	return true, len(stateData.Backend.Config.Path) > 0
+}
+
 // initialize the target
 func (b *Builder) Initialize() error {
 
@@ -206,7 +239,7 @@ func (b *Builder) AutoInitialize() error {
 	)
 
 	// check if terraform state has been initialized
-	statePath := path.Join(
+	statePath := filepath.Join(
 		b.cli.WorkingDirectory(),
 		".terraform", "terraform.tfstate",
 	)
@@ -327,7 +360,7 @@ func (b *Builder) Delete() error {
 				// remove state file 
 				// of deleted deployment
 				os.RemoveAll(
-					path.Join(
+					filepath.Join(
 						b.cli.WorkingDirectory(),
 						".terraform", "terraform.tfstate",
 					),

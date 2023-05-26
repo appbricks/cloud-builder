@@ -36,6 +36,7 @@ type Recipe interface {
 	ConfigPath() string
 	PluginPath() string
 	StatePath() string
+	RunPath() string
 
 	GetVariable(name string) (*Variable, bool)
 	GetVariables() []*Variable
@@ -340,6 +341,15 @@ func (r *recipe) PluginPath() string {
 
 func (r *recipe) StatePath() string {
 	return r.tfStatePath
+}
+
+func (r *recipe) RunPath() string {
+	return filepath.Join(
+		append(
+			[]string{r.workingDirectory}, 
+			r.GetKeyFieldValues()...,
+		)...,
+	)
 }
 
 func (r *recipe) GetVariable(name string) (*Variable, bool) {

@@ -61,6 +61,10 @@ func (f *FakeRecipe) StatePath() string {
 	return "/fake/statepath"
 }
 
+func (f *FakeRecipe) RunPath() string {
+	return "/fake/runpath"
+}
+
 func (f *FakeRecipe) GetKeyFieldValues() []string {
 	return nil
 }
