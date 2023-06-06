@@ -220,10 +220,6 @@ func (r *configReader) ReadMetadata(
 		}
 	}
 
-	logger.TraceMessage(
-		"Sorted metadata of variables declared in recipe '%s':\n%# v",
-		r.recipeDescription, variableList)
-
 	// populate input form
 	r.inputForm = forms_config.RecipeConfigForms.NewGroup(key + "/" + iaas, r.recipeDescription)
 	for _, vm = range variableList {
@@ -236,7 +232,7 @@ func (r *configReader) ReadMetadata(
 		if len(vm.acceptedValues) > 0 {
 			switch vm.acceptedValues[0] {
 
-			case "+iaas_regions":
+			case "$iaas_regions":
 				// special function populates accepted list with cloud regions
 				if cloudProvider, err = provider.NewCloudProvider(iaas); err != nil {
 					return err
@@ -275,6 +271,7 @@ func (r *configReader) ReadMetadata(
 		}
 	}
 
+	logger.DebugMessage("Loaded recipe with %s", r.inputForm)
 	return nil
 }
 
