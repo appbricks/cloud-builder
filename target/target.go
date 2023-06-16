@@ -749,22 +749,24 @@ func (t *Target) NewBuilder(
 	t.Recipe.AddEnvVars(buildVars)
 
 	for _, dt := range t.dependencies {
-		for name, output := range *dt.Output {
-			if name != "cb_managed_instances" {
-				
-				switch v := output.Value.(type) {
-				case bool:
-					buildVars[name] = strconv.FormatBool(v)
-				case int:
-					buildVars[name] = strconv.Itoa(v)
-				case string:
-					buildVars[name] = v
-				default:
-					b, err := json.Marshal(v)
-					if err != nil {
-						return nil, err
+		if dt.Output != nil {
+			for name, output := range *dt.Output {
+				if name != "cb_managed_instances" {
+					
+					switch v := output.Value.(type) {
+					case bool:
+						buildVars[name] = strconv.FormatBool(v)
+					case int:
+						buildVars[name] = strconv.Itoa(v)
+					case string:
+						buildVars[name] = v
+					default:
+						b, err := json.Marshal(v)
+						if err != nil {
+							return nil, err
+						}
+						buildVars[name] = string(b)
 					}
-					buildVars[name] = string(b)
 				}
 			}
 		}
