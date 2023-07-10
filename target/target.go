@@ -153,7 +153,7 @@ func NewTarget(
 func (t *Target) Name() string {
 	region := t.Provider.Region()
 
-	if region == nil {
+	if region == nil || len(*region) == 0 {
 		return fmt.Sprintf(
 			"Deployment \"%s\" on \"%s\".",
 			t.DeploymentName(),
