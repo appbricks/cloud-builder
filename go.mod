@@ -21,7 +21,7 @@ require (
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/hcl/v2 v2.15.0 // indirect
-	github.com/hashicorp/terraform-config-inspect v0.0.0-00010101000000-000000000000
+	github.com/hashicorp/terraform-config-inspect v0.0.0-20230614215431-f32df32a01cd
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/mevansam/gocloud v0.0.1
 	github.com/mevansam/goforms v0.0.1
