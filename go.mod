@@ -23,9 +23,9 @@ require (
 	github.com/hashicorp/hcl/v2 v2.15.0 // indirect
 	github.com/hashicorp/terraform-config-inspect v0.0.0-00010101000000-000000000000
 	github.com/kr/pretty v0.3.0 // indirect
-	github.com/mevansam/gocloud v0.0.0-00010101000000-000000000000
-	github.com/mevansam/goforms v0.0.0-00010101000000-000000000000
-	github.com/mevansam/goutils v0.0.0-00010101000000-000000000000
+	github.com/mevansam/gocloud v0.0.1
+	github.com/mevansam/goforms v0.0.1
+	github.com/mevansam/goutils v0.0.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
 	github.com/otiai10/copy v1.9.0 // indirect
