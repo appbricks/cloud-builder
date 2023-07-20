@@ -94,8 +94,10 @@ func InitFileConfig(
 	config.deviceContext = NewDeviceContext()
 
 	// initialize target context with local cookbook configuration
-	if config.targetContext, err = NewConfigContext(cookbook); err != nil {
-		return nil, err
+	if cookbook != nil {
+		if config.targetContext, err = NewConfigContext(cookbook); err != nil {
+			return nil, err
+		}	
 	}
 
 	// initialize and load viper config file
@@ -246,14 +248,15 @@ func (cf *configFile) Load() error {
 		}
 	}
 
-	// load target context only for device owner is not configured. 
-	// otherwise target context will be loaded when user has logged 
-	// in and the user is confirmed as the device owner
-	_, isOwnerConfigured := cf.deviceContext.GetOwnerUserID()
-	if !isOwnerConfigured {
-		if err = cf.loadTargetContext(); err != nil {
-			return err
-		}
+	if cf.targetContext != nil {
+		// load target context only if device owner is configured. 
+		// otherwise target context will be loaded when user has logged 
+		// in and the user is confirmed as the device owner		
+		if _, isOwnerConfigured := cf.deviceContext.GetOwnerUserID(); !isOwnerConfigured {
+			if err = cf.loadTargetContext(); err != nil {
+				return err
+			}
+		}	
 	}
 
 	logger.TraceMessage("Config loaded from: %s", cf.path)
@@ -402,12 +405,14 @@ func (cf *configFile) Save() error {
 		if valueReader, err = cf.getValue("targetContext"); err != nil {
 			return err
 		}
-		if value, err = io.ReadAll(valueReader); err != nil {
-			return err
+		if valueReader != nil {
+			if value, err = io.ReadAll(valueReader); err != nil {
+				return err
+			}
+			if err = setValue("targetContext", value); err != nil {
+				return err
+			}	
 		}
-		if err = setValue("targetContext", value); err != nil {
-			return err
-		}	
 	}
 
 	// if the key timeout is set then save the encrypted
