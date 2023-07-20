@@ -4,13 +4,13 @@ go 1.19
 
 replace github.com/appbricks/cloud-builder => ./
 
-// replace github.com/mevansam/gocloud => ../../mevansam/gocloud
+replace github.com/mevansam/gocloud => ../../mevansam/gocloud
 
-// replace github.com/mevansam/goforms => ../../mevansam/goforms
+replace github.com/mevansam/goforms => ../../mevansam/goforms
 
-// replace github.com/mevansam/goutils => ../../mevansam/goutils
+replace github.com/mevansam/goutils => ../../mevansam/goutils
 
-// replace github.com/hashicorp/terraform-config-inspect => ../../mevansam/terraform-config-inspect
+replace github.com/hashicorp/terraform-config-inspect => ../../mevansam/terraform-config-inspect
 
 require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
