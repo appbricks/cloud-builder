@@ -1,8 +1,6 @@
 module github.com/appbricks/cloud-builder
 
-go 1.19
-
-replace github.com/appbricks/cloud-builder => ./
+go 1.20
 
 replace github.com/mevansam/gocloud => ../../mevansam/gocloud
 
@@ -23,9 +21,9 @@ require (
 	github.com/hashicorp/hcl/v2 v2.15.0 // indirect
 	github.com/hashicorp/terraform-config-inspect v0.0.0-20230614215431-f32df32a01cd
 	github.com/kr/pretty v0.3.0 // indirect
-	github.com/mevansam/gocloud v0.0.1
-	github.com/mevansam/goforms v0.0.1
-	github.com/mevansam/goutils v0.0.1
+	github.com/mevansam/gocloud v0.0.2
+	github.com/mevansam/goforms v0.0.2
+	github.com/mevansam/goutils v0.0.2
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
 	github.com/otiai10/copy v1.9.0 // indirect
