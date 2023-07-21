@@ -93,7 +93,8 @@ func InitFileConfig(
 	// initialize device context
 	config.deviceContext = NewDeviceContext()
 
-	// initialize target context with local cookbook configuration
+	// initialize target context with local cookbook 
+	// configuration if cookbook provided
 	if cookbook != nil {
 		if config.targetContext, err = NewConfigContext(cookbook); err != nil {
 			return nil, err
@@ -204,8 +205,10 @@ func (cf *configFile) Reset() error {
 	if err = cf.deviceContext.Reset(); err != nil {
 		return err
 	}
-	if err = cf.targetContext.Reset(); err != nil {
-		return err
+	if cf.targetContext != nil {
+		if err = cf.targetContext.Reset(); err != nil {
+			return err
+		}	
 	}
 
 	cf.Set("initialized", false)
@@ -393,7 +396,7 @@ func (cf *configFile) Save() error {
 			return err
 		}	
 		// upload target context if changed
-		if cf.targetContext.IsDirty() {
+		if cf.targetContext.IsDirty() && cf.uploadConfig != nil {
 			if cf.cfgAsOf, err = cf.uploadConfig("targetContext", output, cf.cfgAsOf); err != nil {
 				return err
 			}
@@ -511,7 +514,7 @@ func (cf *configFile) TargetContext() TargetContext {
 
 func (cf *configFile) SetLoggedInUser(userID, userName string) error {
 
-	if !cf.targetContextLoaded {
+	if cf.targetContext != nil && !cf.targetContextLoaded {
 		ownerUserID, isOwnerConfigured := cf.deviceContext.GetOwnerUserID()
 		if isOwnerConfigured && ownerUserID == userID {
 			if err := cf.loadTargetContext(); err != nil {
