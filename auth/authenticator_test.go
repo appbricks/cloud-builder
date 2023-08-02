@@ -49,6 +49,7 @@ var _ = Describe("Authenticator", func() {
 		oathServer = startOAuthTestServer(serverExit)
 
 		authn = auth.NewAuthenticator(
+			context.Background(),
 			&testAuthContext,
 			&oauth2.Config{
 				ClientID:     "12345",

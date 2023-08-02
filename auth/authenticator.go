@@ -18,8 +18,10 @@ import (
 )
 
 type Authenticator struct {
-	context config.AuthContext
-	config *oauth2.Config
+	ctx context.Context
+
+	authContext config.AuthContext
+	oauthConfig *oauth2.Config
 
 	authCallbackHandler func(w http.ResponseWriter, r *http.Request)
 
@@ -33,14 +35,18 @@ type Authenticator struct {
 }
 
 func NewAuthenticator(
-	context config.AuthContext,
-	config *oauth2.Config,
+	ctx context.Context,
+	authContext config.AuthContext,
+	oauthConfig *oauth2.Config,
 	authCallbackHandler func(w http.ResponseWriter, r *http.Request),
 ) *Authenticator {
 
 	return &Authenticator{
-		context: context,
-		config: config,
+		ctx: ctx,
+
+		authContext: authContext,
+		oauthConfig:      oauthConfig,
+
 		authCallbackHandler: authCallbackHandler,
 
 		localServerExit: &sync.WaitGroup{},
@@ -82,7 +88,7 @@ func (authn *Authenticator) StartOAuthFlow(
 	}
 
 	// construct callback URL for auth code exchange
-	authn.config.RedirectURL = fmt.Sprintf(
+	authn.oauthConfig.RedirectURL = fmt.Sprintf(
 		"http://localhost:%d/callback",
 		port,
 	)
@@ -105,7 +111,7 @@ func (authn *Authenticator) StartOAuthFlow(
 	go func() {
 		// signal server has shutdown
 		defer func() {
-			authn.config.RedirectURL = ""
+			authn.oauthConfig.RedirectURL = ""
 			authn.localHttpServer = nil
 			authn.localServerExit.Done()
 		}()
@@ -123,7 +129,7 @@ func (authn *Authenticator) StartOAuthFlow(
 	// generate authorize URL where user will sign 
 	// in and redirect back to the local server
 	authn.state = utils.RandomString(10)
-	authURL := authn.config.AuthCodeURL(authn.state)
+	authURL := authn.oauthConfig.AuthCodeURL(authn.state)
 
 	return authURL, nil
 }
@@ -142,6 +148,11 @@ func (authn *Authenticator) WaitForOAuthFlowCompletion(timeout time.Duration) (b
 			// server exited with callback 
 			// from authentication service
 			return false, authn.serverError
+		case <-authn.ctx.Done():
+			// context cancelled so cancel 
+			// oauth flow
+			authn.shutdownLocalHttpServer()
+			return false, authn.ctx.Err()
 		case <-time.After(timeout):
 			// timed out
 			return true, nil
@@ -190,17 +201,21 @@ func (authn *Authenticator) OAuthHandler(w http.ResponseWriter, r *http.Request)
 	if authn.localHttpServer != nil {	
 		go func() {	
 			// add a delay so any callback content 
-			// for response page can be served
-			time.Sleep(time.Second)
-
-			if err = authn.localHttpServer.Shutdown(context.Background()); err != nil {
-				authn.serverError = err
-					
-				logger.DebugMessage(
-					"Error shutting down local HTTP OAuth callback server: %# v",
-					err)
-			}
+			// so response page can be served
+			time.Sleep(time.Millisecond * 500)
+			authn.shutdownLocalHttpServer()
 		}()
+	}
+}
+
+func (authn *Authenticator) shutdownLocalHttpServer() {
+
+	if err := authn.localHttpServer.Shutdown(context.Background()); err != nil {
+		authn.serverError = err
+			
+		logger.DebugMessage(
+			"Error shutting down local HTTP OAuth callback server: %# v",
+			err)
 	}
 }
 
@@ -213,10 +228,10 @@ func (authn *Authenticator) RetrieveToken(authCode string) error {
 		token *oauth2.Token
 	)
 
-	if token, err = authn.config.Exchange(context.Background(), authCode); err != nil {
+	if token, err = authn.oauthConfig.Exchange(context.Background(), authCode); err != nil {
 		return err
 	}
-	authn.context.SetToken(token)
+	authn.authContext.SetToken(token)
 	return nil
 }
 
@@ -231,12 +246,12 @@ func (authn *Authenticator) IsAuthenticated() (bool, error) {
 		token *oauth2.Token
 	)
 
-	token = authn.context.GetToken()
+	token = authn.authContext.GetToken()
 	if token == nil {
 		return false, fmt.Errorf("not authenticated")
 	}
 	token.Expiry = time.Now()
-	if token, err = authn.config.TokenSource(context.Background(), token).Token(); err != nil {
+	if token, err = authn.oauthConfig.TokenSource(authn.ctx, token).Token(); err != nil {
 		errorMsg := err.Error()
 		logger.DebugMessage("Token source refresh error: %s", errorMsg)
 		
@@ -245,6 +260,6 @@ func (authn *Authenticator) IsAuthenticated() (bool, error) {
 		}
 		return false, err
 	}
-	authn.context.SetToken(token)
+	authn.authContext.SetToken(token)
 	return true, nil
 }
