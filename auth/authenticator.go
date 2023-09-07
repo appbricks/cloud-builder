@@ -39,18 +39,20 @@ func NewAuthenticator(
 	authContext config.AuthContext,
 	oauthConfig *oauth2.Config,
 	authCallbackHandler func(w http.ResponseWriter, r *http.Request),
-) *Authenticator {
+) (*Authenticator, context.CancelFunc) {
+
+	cancellableCtx, cancelFunc := context.WithCancel(ctx)
 
 	return &Authenticator{
-		ctx: ctx,
+		ctx: cancellableCtx,
 
 		authContext: authContext,
-		oauthConfig:      oauthConfig,
+		oauthConfig: oauthConfig,
 
 		authCallbackHandler: authCallbackHandler,
 
 		localServerExit: &sync.WaitGroup{},
-	}
+	}, cancelFunc
 }
 
 // Starts an http listener locally to listen for

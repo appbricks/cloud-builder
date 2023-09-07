@@ -19,6 +19,8 @@ type Config interface {
 	Load() error
 	Save() error
 
+	GetConfigFile() string
+
 	GetConfigAsOf() int64
 	SetConfigAsOf(asOf int64)
 
@@ -29,8 +31,10 @@ type Config interface {
 	SetInitialized()
 
 	HasPassphrase() bool
+	GetPassphrase() string
 	SetPassphrase(passphrase string)
 
+	GetKeyTimeout() time.Duration
 	SetKeyTimeout(timeout time.Duration)
 	AuthContext() AuthContext
 	DeviceContext() DeviceContext

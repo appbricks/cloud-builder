@@ -458,6 +458,10 @@ func (cf *configFile) Save() error {
 	return nil
 }
 
+func (cf *configFile) GetConfigFile() string {
+	return cf.path
+}
+
 func (cf *configFile) GetConfigAsOf() int64 {
 	return cf.cfgAsOf
 }
@@ -486,6 +490,10 @@ func (cf *configFile) HasPassphrase() bool {
 	return cf.keyTimeout != -1
 }
 
+func (cf *configFile) GetPassphrase() string {
+	return cf.passphrase
+}
+
 func (cf *configFile) SetPassphrase(passphrase string) {
 	cf.passphrase = passphrase
 
@@ -494,6 +502,10 @@ func (cf *configFile) SetPassphrase(passphrase string) {
 	} else if cf.keyTimeout == -1 {
 		cf.keyTimeout = 0
 	}
+}
+
+func (cf *configFile) GetKeyTimeout() time.Duration {
+	return time.Duration(cf.keyTimeout)
 }
 
 func (cf *configFile) SetKeyTimeout(timeout time.Duration) {

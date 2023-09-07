@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/appbricks/cloud-builder/userspace"
+	"github.com/mevansam/goutils/logger"
 )
 
 // global configuration context
@@ -71,8 +73,21 @@ func (dc *deviceContext) Save(output io.Writer) error {
 }
 
 func (dc *deviceContext) NewDevice() (*userspace.Device, error) {
-	dc.Device = &userspace.Device{}
-	err := dc.Device.UpdateKeys()
+
+	var (
+		err error
+
+		device *userspace.Device
+	)
+	
+	device = &userspace.Device{}
+	if device.Name, err = os.Hostname(); err != nil {
+		logger.ErrorMessage("Unable to determine hostname for default device name: %s", err.Error())
+	}
+	if err = device.UpdateKeys(); err != nil {
+		return nil, err
+	}
+	dc.Device = device
 	return dc.Device, err
 }
 

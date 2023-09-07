@@ -31,7 +31,7 @@ type User struct {
 	PreferredName   string `json:"-"`
 }
 
-func (u *User) SetKey(key *crypto.RSAKey) error {
+func (u *User) SetKey(key *crypto.RSAKey, newKey bool) error {
 
 	var (
 		err error
@@ -42,29 +42,41 @@ func (u *User) SetKey(key *crypto.RSAKey) error {
 		verifyString []byte
 	)
 
-	if len(u.RSAPublicKey) > 0 {
+	if !newKey && len(u.RSAPublicKey) > 0 {
 		// validate known public key with provided private 
 		// key by encrypting some data with the known public 
 		// key and decrypting with the provided private key
 		if publicKey, err = crypto.NewPublicKeyFromPEM(u.RSAPublicKey); err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to create public key from PEM for user '%s': %s", 
+				u.Name, err.Error(),
+			)
 		}
 		if dataToVerify, err = publicKey.Encrypt([]byte(u.UserID)); err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to encrypt data with public key for user '%s': %s", 
+				u.Name, err.Error(),
+			)
 		}
 		if verifyString, err = key.Decrypt(dataToVerify); err != nil {
 			logger.ErrorMessage(
 				"User.SetKey(): Validation of given RSA key with user's known public key failed: %s", 
 				err.Error(),
 			)
-			return err
+			return fmt.Errorf(
+				"failed to decrypt data with private key for user '%s': %s", 
+				u.Name, err.Error(),
+			)
 		}
 		if string(verifyString) != u.UserID {
 			logger.ErrorMessage(
 				"User.SetKey(): Decrypted value was '%s' not expected '%s': %s", 
 				string(verifyString), u.UserID, err.Error(),
 			)
-			return fmt.Errorf("decryption succeeded but verification failed")
+			return fmt.Errorf(
+				"decrypted text does not match plain text for user '%s'", 
+				u.Name,
+			)
 		}
 	}
 

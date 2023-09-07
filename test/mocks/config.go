@@ -37,6 +37,10 @@ func (mc *MockConfig) Save() error {
 	return nil
 }
 
+func (mc *MockConfig) GetConfigFile() string {
+	return "/home/fakeuser/.mycscloud/config.yml"
+}
+
 func (mc *MockConfig) GetConfigAsOf() int64 {
 	return 0
 }
@@ -60,6 +64,10 @@ func (mc *MockConfig) SetEULAAccepted() {
 
 func (mc *MockConfig) HasPassphrase() bool {
 	return false
+}
+
+func (mc *MockConfig) GetPassphrase() string {
+	return ""
 }
 
 func (mc *MockConfig) SetPassphrase(passphrase string) {
