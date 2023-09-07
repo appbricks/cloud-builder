@@ -48,7 +48,7 @@ var _ = Describe("Authenticator", func() {
 		serverExit.Add(1)
 		oathServer = startOAuthTestServer(serverExit)
 
-		authn = auth.NewAuthenticator(
+		authn, _ = auth.NewAuthenticator(
 			context.Background(),
 			&testAuthContext,
 			&oauth2.Config{

@@ -73,6 +73,10 @@ func (mc *MockConfig) GetPassphrase() string {
 func (mc *MockConfig) SetPassphrase(passphrase string) {
 }
 
+func (mc *MockConfig) GetKeyTimeout() time.Duration {
+	return 0
+}
+
 func (mc *MockConfig) SetKeyTimeout(timeout time.Duration) {
 }
 
